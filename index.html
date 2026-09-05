@@ -1,19 +1,23 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="座位編輯">
-<meta name="theme-color" content="#1d4ed8">
+<html lang="zh-Hant" data-page-node-id="LL4DBJUYoeEWbPNW9q6azj">
+<head data-page-node-id="FS2Z1jck2PM3cKX8qPjmQO">
+<meta charset="UTF-8" data-page-node-id="teyNWAVRKFNBeowezA4Tpv">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" data-page-node-id="K3SoYNla507b0IMIrsRfEM">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" data-page-node-id="SpwRks7a4oUHTbro0dHAct">
+<meta http-equiv="Pragma" content="no-cache" data-page-node-id="muflecGwEDlE2eZnyMzmwD">
+<meta http-equiv="Expires" content="0" data-page-node-id="fznHbvxBscD9bQGztFVBmZ">
+<meta name="apple-mobile-web-app-capable" content="yes" data-page-node-id="sgtLyYFN1OMiYGEgAuDEAw">
+<meta name="mobile-web-app-capable" content="yes" data-page-node-id="fE61KMLXM1hst8VG79mjQK">
+<meta name="apple-mobile-web-app-status-bar-style" content="default" data-page-node-id="uaMXKZi1rknfhgbQD8wCIa">
+<meta name="apple-mobile-web-app-title" content="座位編輯" data-page-node-id="lvI2CFxEW6uflll9t0FrQG">
+<meta name="theme-color" content="#1d4ed8" data-page-node-id="5sxDGAcYhQP7oEsDmcjFiY">
+<!-- 版本號：每次更新網站請改這裡的 content（與 sw.js 的版本號一併改），在線裝置會自動偵測並提示更新 -->
+<meta name="app-version" content="2026-09-06.4" data-page-node-id="cR3oFEhdIrPr5RFA2iP1bE">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" data-page-node-id="L4mbuz9GQ7klsq0EWNkxOv">
+<link rel="icon" href="favicon.svg" type="image/svg+xml" data-page-node-id="M1YfTc0WycnVOJLDO7ocXN">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png" data-page-node-id="ZdK1HLwnGBRpXve68rEs1p">
+<link rel="manifest" href="manifest.webmanifest" data-page-node-id="39R9C0zN5T3ogHbIFmRuOJ">
 <title>座位圖編輯器（通用場地）</title>
-<link rel="apple-touch-icon" sizes="512x512" href="apple-touch-icon.png">
-<link rel="icon" href="apple-touch-icon.png">
 <style>
   :root{
     --bg:#f4f6fb; --card:#ffffff; --ink:#1f2937; --muted:#6b7280;
@@ -144,6 +148,11 @@
   .preview-bar .pv-tag{font-weight:700;}
   .preview-bar .pv-hint{color:#cbd5e1; font-size:12px;}
   .preview-bar button{font-size:13px; padding:6px 12px; min-height:34px;}
+  /* 有新版本提示列（畫面上方） */
+  .upd-bar{position:fixed; top:0; left:50%; transform:translateX(-50%); z-index:120; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    background:var(--brand); color:#fff; padding:10px 14px; border-radius:0 0 12px 12px; box-shadow:0 8px 24px rgba(0,0,0,.28); font-size:13px; max-width:92vw;}
+  .upd-bar button{font-size:13px; padding:6px 12px; min-height:34px; background:#fff; color:#1d4ed8; border-color:#fff; font-weight:600;}
+  .upd-bar button.ghost{background:rgba(255,255,255,.16); color:#fff; border-color:rgba(255,255,255,.5); font-weight:400;}
 
   /* 嘉賓名單（排位清單） */
   .gl-stats{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 12px;}
@@ -151,7 +160,11 @@
   .gl-stat b{display:block; font-size:22px; color:#1d4ed8; line-height:1.15;}
   .gl-stat span{font-size:12px; color:var(--muted);}
   .gl-preview{border:1px solid var(--line); border-radius:12px; background:#fff; padding:8px; margin-bottom:12px; overflow:auto;}
-  .gl-preview svg{width:100%; height:auto; display:block; max-height:480px;}
+  /* 尺寸由 JS 依原圖 viewBox 比例精確計算後寫入 width/height，確保顯示比例永遠不變形 */
+  .gl-preview svg{display:block; max-width:none;}
+  .gl-pvinfo{font-size:12px; color:var(--muted); margin:0 0 8px; line-height:1.6;}
+  .gl-pvinfo b{color:var(--ink); font-weight:600;}
+  .gl-pvinfo .pv-bad{color:#b91c1c; font-weight:600;}
   .gl-table-wrap{max-height:540px; overflow:auto; border:1px solid var(--line); border-radius:12px; background:#fff;}
   table.gl{width:100%; border-collapse:collapse; font-size:14px;}
   table.gl th{background:#1d4ed8; color:#fff; font-weight:600; padding:9px 10px; text-align:left; white-space:nowrap; position:sticky; top:0; z-index:1;}
@@ -170,285 +183,307 @@
     .wrap > #guestPanel{display:block !important; border:none; box-shadow:none; padding:0;}
     .wrap > #guestPanel > summary{display:none;}
     .gl-table-wrap{max-height:none !important; overflow:visible !important; border:none;}
-    .gl-preview{break-inside:avoid; max-height:none;}
-    .gl-preview svg{max-height:none;}
+    .gl-preview{break-inside:avoid; max-height:none; overflow:visible;}
+    .gl-preview svg{width:100% !important; height:auto !important; max-height:none !important;}
     body, .wrap{background:#fff;}
   }
+  /* 有新版本提示條（固定在頂部） */
+  .upd-bar{position:fixed; top:0; left:0; right:0; z-index:9999; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    background:#1d4ed8; color:#fff; padding:10px 14px; font-size:14px; box-shadow:0 2px 10px rgba(0,0,0,.25);}
+  .upd-bar span{flex:1 1 auto; min-width:180px;}
+  .upd-bar button{font:inherit; border:none; border-radius:8px; padding:7px 14px; cursor:pointer; min-height:34px;}
+  .upd-bar button:not(.ghost){background:#fff; color:#1d4ed8; font-weight:700;}
+  .upd-bar button.ghost{background:transparent; color:#dbeafe; border:1px solid rgba(255,255,255,.6);}
 </style>
 </head>
-<body>
-<div class="wrap">
-  <header>
-    <h1>座位圖編輯器 · 通用場地範本</h1>
-    <p>適用於各類座談會、發佈會、交流會、宴請活動；可自訂排數／列數／通道／主講台場景／停車區，並提供「座談會（行列座位）」與「宴請（圓桌）」兩種編排模式，逐座設定狀態與姓名，匯出 SVG／PNG／JSON／CSV。</p>
-    <p style="font-size:12px;color:#6b7280;margin-top:6px;">程式版本：<b id="buildTag" style="color:#1d4ed8;">載入中…</b><span id="buildNote"></span></p>
+<body data-page-node-id="gDpuqndVANj4LdG5M0E9C4">
+<div class="wrap" data-page-node-id="z0PGo6uMUBjsMswgXfDTGj">
+  <header data-page-node-id="tiR3K61po4EIFBMFIT7YbD">
+    <h1 data-page-node-id="4lwcxhRevtm0nF2f9QI8N9">座位圖編輯器 · 通用場地範本</h1>
+    <p data-page-node-id="eESaQf8MoRlND2lVtB0iqq">適用於各類座談會、發佈會、交流會、宴請活動；可自訂排數／列數／通道／主講台場景／停車區，並提供「座談會（行列座位）」與「宴請（圓桌）」兩種編排模式，逐座設定狀態與姓名，匯出 SVG／PNG／JSON／CSV。</p>
+    <p style="font-size:12px;color:#6b7280;margin-top:6px;" data-page-node-id="FjOZJp4MCmA0Z4z7BaonvO">程式版本：<b id="buildTag" style="color:#1d4ed8;" data-page-node-id="yBXCdxprWv9ZyjBHVc2WW2">載入中…</b><span id="buildNote" data-page-node-id="4Hd3iqBCM9QxDcZWSjUEsC"></span></p>
   </header>
 
-  <div class="toolbar">
-    <div class="grp">
-      <span class="lbl">主講台場景</span>
-      <div class="row">
-        <button id="btnScenario" class="ghost" onclick="switchScenarioUI()" style="min-width:110px;color:#000000;">場景：預設</button>
+  <div class="toolbar" data-page-node-id="VEi4s4G5d4qM0CHg9NSk5d">
+    <div class="grp" data-page-node-id="TEPANgghaVK0g2rtiDkBAg">
+      <span class="lbl" data-page-node-id="kq3IW9sLwGJsJEguPriHw5">主講台場景</span>
+      <div class="row" data-page-node-id="3IjZAsz9TY26x1nIF9g6qv">
+        <button id="btnScenario" class="ghost" onclick="switchScenarioUI()" style="min-width:110px;color:#000000;" data-page-node-id="xk9whN55L8yizp4FUywIKq">場景：預設</button>
       </div>
     </div>
-    <div class="grp">
-      <span class="lbl">設施</span>
-      <div class="row">
-        <button id="btnPark" class="ghost" onclick="togglePark()">停車區：開</button>
+    <div class="grp" data-page-node-id="0tqEBmiXKrRqDgq4BtjJIV">
+      <span class="lbl" data-page-node-id="HUPuQ5JCAQmfnTY9WcqDoD">設施</span>
+      <div class="row" data-page-node-id="T6KsZmSaEbYopwIKitCB6L">
+        <button id="btnPark" class="ghost" onclick="togglePark()" data-page-node-id="lA6GAQLZBgiviXLBi9St8F">停車區：開</button>
       </div>
     </div>
-    <div class="grp">
-      <span class="lbl">匯出 / 匯入 / 重置</span>
-      <div class="row">
-        <button class="ghost" onclick="exportSVG()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>匯出 SVG</button>
-        <button class="ghost" onclick="exportPNG()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-7 7"/></svg>匯出 PNG</button>
-        <button class="ghost" onclick="exportJSON()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>匯出 JSON</button>
-        <button class="ghost" onclick="exportCSV()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/><path d="M9 9v11"/></svg>匯出 CSV</button>
-        <button class="ghost" onclick="document.getElementById('fileInput').click()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="M7 13l5-5 5 5"/><path d="M5 3h14"/></svg>匯入 JSON</button>
-        <button class="ghost" onclick="resetAll()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>重置範本</button>
-        <input id="fileInput" type="file" accept="application/json,.json" style="display:none" onchange="importJSON(event)">
+    <div class="grp" data-page-node-id="pwuaiCgCnTrqmSqhh67Uhk">
+      <span class="lbl" data-page-node-id="ioXPPezl7zI2GXRwEcVn1L">匯出 / 匯入 / 重置</span>
+      <div class="row" data-page-node-id="lFiEis6hd5TpQT4AU1jmPi">
+        <button class="ghost" onclick="exportSVG()" data-page-node-id="498yndNrFil4ZujLUx43oT">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="FRAyni7MOTZHbP2RmEcCOj"><path d="M12 3v12" data-page-node-id="P2dffsvr2IY0hn9ohIPDn2"/><path d="M7 11l5 5 5-5" data-page-node-id="uoiz9QL6fz6J1updaZTkhj"/><path d="M5 21h14" data-page-node-id="F6lWUho8kDm4SENujYJCKU"/></svg>匯出 SVG</button>
+        <button class="ghost" onclick="exportPNG()" data-page-node-id="DtySc8NNkXI0M5XvRxT6rF">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="uO8DD0kpWXi4ypHWXoACyS"><rect x="3" y="4" width="18" height="16" rx="2" data-page-node-id="5RXfIx9bcbE5TaRPobBHcy"/><circle cx="9" cy="10" r="1.6" data-page-node-id="aTVENN9RfF9dGVfMmwyElU"/><path d="M21 16l-5-5-7 7" data-page-node-id="3AzDoIWz2Wp5XgAPPZaJLY"/></svg>匯出 PNG</button>
+        <button class="ghost" onclick="exportJSON()" data-page-node-id="UC6Cya3ScAO6PbWzlyWI5t">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="4A42NTGGGJFY6MDhV2U785"><path d="M12 3v12" data-page-node-id="gHOkQNUT0cOca4GvcxP7e1"/><path d="M7 11l5 5 5-5" data-page-node-id="35d75n5VQZD0rvrtRhQ955"/><path d="M5 21h14" data-page-node-id="85ACvAsTVtXfz1d8YIaifF"/></svg>匯出 JSON</button>
+        <button class="ghost" onclick="exportCSV()" data-page-node-id="Z0zEHgkikGefZGzImbILZG">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="6rkZ4XoWWBgbuRmpNadU19"><path d="M4 4h16v16H4z" data-page-node-id="7bhl3YZ7QASdPDAzPhEoFU"/><path d="M4 9h16" data-page-node-id="svAXQkTe2gIkH2faHYHRVp"/><path d="M9 9v11" data-page-node-id="aepIhGrz5BRWlBsCtJpWSp"/></svg>匯出 CSV</button>
+        <button class="ghost" onclick="document.getElementById('fileInput').click()" data-page-node-id="GHsSTpklsIvrZlua8GzN7M">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="2rkgaRdUSvvhaEgFvwnDr4"><path d="M12 21V9" data-page-node-id="rvzGwGGVYTpjXawwIBnK7g"/><path d="M7 13l5-5 5 5" data-page-node-id="ypOpjBBf080MkuDhNQxaoj"/><path d="M5 3h14" data-page-node-id="4xl0ykx1TMDVrFaAOaB3cl"/></svg>匯入 JSON</button>
+        <button class="ghost" onclick="exportBundle()" title="座位圖＋記錄庫＋顯示設定，一個檔搬到其他裝置" data-page-node-id="Y0RGhM2YYm7n0ls8WNgjeu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="6NHNiNAkmJATNrH7zlyZU9"><rect x="3" y="7" width="18" height="13" rx="2" data-page-node-id="H4QYwXm1xvjRIl6GRGJAZz"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" data-page-node-id="pvgHnLOA9WrOMkkn6R0tK0"/></svg>打包全部（同步檔）</button>
+        <button class="ghost" onclick="document.getElementById('bundleInput').click()" title="從其他裝置匯入「打包全部（同步檔）」" data-page-node-id="JZwQDgjDnfITgpqGHPlz2z">匯入同步檔</button>
+        <button class="ghost" onclick="resetAll()" data-page-node-id="CkuqhNglI8Cqodu0Kgfc4Y">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="DjubXY47Wym4Nf7BajxS9S"><path d="M3 12a9 9 0 1 0 3-6.7" data-page-node-id="ZBYD0BP8oyFIPldiqplPTa"/><path d="M3 4v5h5" data-page-node-id="xAXPvGMUky8F7gPtxokexo"/></svg>重置範本</button>
+        <input id="fileInput" type="file" accept="application/json,.json" style="display:none" onchange="importJSON(event)" data-page-node-id="SvsrJUQlUzrw2hFhoC8D2D">
+        <input id="bundleInput" type="file" accept="application/json,.json" style="display:none" onchange="importBundle(event)" data-page-node-id="8G31vDRH6iO8XX1m21T20Q">
       </div>
     </div>
   </div>
 
-  <details class="cfg" open>
-    <summary>場地設定（適用於各類接待／活動場合）</summary>
-    <div class="row" style="margin:4px 0 12px;align-items:center;gap:10px;">
-      <span class="lbl">編排模式</span>
-      <select id="cfgMode">
-        <option value="grid">座談會（行列座位）</option>
-        <option value="banquet">宴請（圓桌）</option>
-        <option value="meeting">會議（長方桌）</option>
-        <option value="outdoor">戶外發佈（現場發佈場景）</option>
+  <details class="cfg" open data-page-node-id="FxnARLGXYTnFscI7KatDkk">
+    <summary data-page-node-id="KKN0YS80ONdHZ3ECJHeg1f">場地設定（適用於各類接待／活動場合）</summary>
+    <div class="row" style="margin:4px 0 12px;align-items:center;gap:10px;" data-page-node-id="x6U0zQI3eEJ1TFGV6GLixg">
+      <span class="lbl" data-page-node-id="AmVzoVd1BeF52nSXb7BIgM">編排模式</span>
+      <select id="cfgMode" data-page-node-id="VFYEPJFaL5p1IHYwGR6y2N">
+        <option value="grid" data-page-node-id="ma4G2pqoNvzLUSrqIM6PUh">座談會（行列座位）</option>
+        <option value="banquet" data-page-node-id="PKA69DLC5HXSbuvrEqbnR1">宴請（圓桌）</option>
+        <option value="meeting" data-page-node-id="gE1ELWYC9TKYp8v4cYOIsf">會議（長方桌）</option>
+        <option value="outdoor" data-page-node-id="OiPoCxuPAbkj70cuSp1KLG">戶外發佈（現場發佈場景）</option>
       </select>
-      <span class="hint" style="margin:0;">切換後左側設定會對應切換。</span>
+      <span class="hint" style="margin:0;" data-page-node-id="tsBMCV8DgmDr2x06n7aU2j">切換後左側設定會對應切換。</span>
     </div>
-    <div id="titleControls" class="cfg-grid">
-      <label>活動名稱（圖上標題）<input id="cfgActivity" type="text" placeholder="如：三五規劃交流會"></label>
-      <label>場地名稱（圖上標題）<input id="cfgVenue" type="text" placeholder="如：中葡綜合體多功能廳"></label>
-      <label class="chk"><input id="cfgShowTitle" type="checkbox"> 顯示圖上標題</label>
+    <div id="titleControls" class="cfg-grid" data-page-node-id="uyDGUZ1l7IYQsw2iWfuWGi">
+      <label data-page-node-id="q1O2hlT2dbs7YraG22MRFH">活動名稱（圖上標題）<input id="cfgActivity" type="text" placeholder="如：三五規劃交流會" data-page-node-id="r6dcFEt2tIytUzEckID8u6"></label>
+      <label data-page-node-id="DbjPuRBgwboNEZHKjevcwz">場地名稱（圖上標題）<input id="cfgVenue" type="text" placeholder="如：中葡綜合體多功能廳" data-page-node-id="FHp4ogUxv6WoidpzVvfDaJ"></label>
+      <label class="chk" data-page-node-id="yt86OEfdgZsatdQ1WzpJAd"><input id="cfgShowTitle" type="checkbox" data-page-node-id="AOP0L2IiqFRRUc9cKpVfOm"> 顯示圖上標題</label>
     </div>
-    <div id="gridControls">
-    <div class="cfg-grid">
-      <label>排數（最多 26）<input id="cfgRows" type="number" min="1" max="26"></label>
-      <label>每行座位數（最多 30）<input id="cfgCols" type="number" min="1" max="30"></label>
-      <label>通道位置（第幾列之後，0=無通道）<input id="cfgAisle" type="number" min="0" max="30"></label>
-      <label>前幾排設通道（0=僅按列通道）<input id="cfgAisleRows" type="number" min="0" max="26"></label>
-      <label class="chk"><input id="cfgScreen" type="checkbox"> 顯示投影屏幕</label>
-      <label class="chk"><input id="cfgStage" type="checkbox"> 顯示主講台</label>
-      <label class="chk"><input id="cfgPark" type="checkbox"> 顯示停車區</label>
-      <label class="chk"><input id="cfgShowExits" type="checkbox"> 顯示出入口</label>
-      <label>停車區標籤<input id="cfgParkLabel" type="text"></label>
-      <label>停車區副標<input id="cfgParkSub" type="text"></label>
+    <div id="gridControls" data-page-node-id="Q3SzAuBWCIfctnEc1pwfjz">
+    <div class="cfg-grid" data-page-node-id="56zIzDnOa05xkEyKDXNEsO">
+      <label data-page-node-id="Y7HDU1yaK9qQQf9t2ZA3kA">排數（最多 26）<input id="cfgRows" type="number" min="1" max="26" data-page-node-id="acrmKtWyUfDBJnRjH8045p"></label>
+      <label data-page-node-id="Q5BwJQxRGGhSJiCMiRVGDs">每行座位數（最多 30）<input id="cfgCols" type="number" min="1" max="30" data-page-node-id="Q7OCfCQlKWJ0pBSUH3zzId"></label>
+      <label data-page-node-id="ZPAo6of1Nci9xpljA3aCLL">通道位置（第幾列之後，0=無通道）<input id="cfgAisle" type="number" min="0" max="30" data-page-node-id="8bak1S9tZNQiPC8HWzlidK"></label>
+      <label data-page-node-id="gp8zsW0PBHEL5Cf6I5TvIJ">前幾排設通道（0=僅按列通道）<input id="cfgAisleRows" type="number" min="0" max="26" data-page-node-id="KA6XjIrEI3qieEJMuKgnxv"></label>
+      <label class="chk" data-page-node-id="1x3F817VhvuC2zW7w2Ynst"><input id="cfgScreen" type="checkbox" data-page-node-id="Mzf4KBm4TzMPFEDfuRZ9p9"> 顯示投影屏幕</label>
+      <label class="chk" data-page-node-id="WrRt0cSdY2aMtTvyDLaZIc"><input id="cfgStage" type="checkbox" data-page-node-id="5QGjy4qNx97XZKzcNygTla"> 顯示主講台</label>
+      <label class="chk" data-page-node-id="MKBLw2CpfFelsrbRfgb2OZ"><input id="cfgPark" type="checkbox" data-page-node-id="2CvOzPDjKitHXdi7DgBCiG"> 顯示停車區</label>
+      <label class="chk" data-page-node-id="FgEjqenX8WzFqHGnR4Wkfu"><input id="cfgShowExits" type="checkbox" data-page-node-id="O0YeD57gHwfoPSOthDWyBB"> 顯示出入口</label>
+      <label data-page-node-id="2kUkj3suEfpAPtzoHO3tpo">停車區標籤<input id="cfgParkLabel" type="text" data-page-node-id="H4SajyEe9sb9gCXQzIgZMd"></label>
+      <label data-page-node-id="Yg8ZmKGGUZ4K2sJctEUoLs">停車區副標<input id="cfgParkSub" type="text" data-page-node-id="dH2py7mmSyNyiM7IpN3n0m"></label>
     </div>
-    <div class="scn">
-      <div class="scn-bar">
-        <span>主講台場景：</span>
-        <select id="scenarioSel"></select>
-        <input id="scenarioName" type="text" placeholder="場景名稱">
-        <button id="addScenario" class="ghost">＋新增</button>
-        <button id="delScenario" class="ghost">刪除</button>
+    <div class="scn" data-page-node-id="kcD13vx4DJlyrCIIqPmjmL">
+      <div class="scn-bar" data-page-node-id="qsEmLvt82savn7ePCSzFAX">
+        <span data-page-node-id="khadQSJjrr2HVsajfuObQq">主講台場景：</span>
+        <select id="scenarioSel" data-page-node-id="79xd4ovRMT70Geop6hpXDD"></select>
+        <input id="scenarioName" type="text" placeholder="場景名稱" data-page-node-id="G3SeynvTl3vpcjXTnj8SjC">
+        <button id="addScenario" class="ghost" data-page-node-id="1xhi1mos00IElGtYYAanLF">＋新增</button>
+        <button id="delScenario" class="ghost" data-page-node-id="idczr2Y7erlycla8V3ly7K">刪除</button>
       </div>
-      <div id="stageList" class="stage-list"></div>
-      <button id="addStagePos" class="ghost">＋新增主位</button>
+      <div id="stageList" class="stage-list" data-page-node-id="qB4HV4ufnBHznkpZsd6YLj"></div>
+      <button id="addStagePos" class="ghost" data-page-node-id="IPr8MjzeRzJSKfBHieccP5">＋新增主位</button>
     </div>
-    <p class="hint">修改排數／列數會保留原有座位資料；其餘設定即時生效並自動儲存。所有設定與編輯內容存於本機瀏覽器，關閉不流失；可用「匯出 JSON」備份、他處「匯入 JSON」還原；「匯出 CSV」可取得完整座位名單（桌名／座位／姓名／狀態）供 Excel 整理。</p>
+    <p class="hint" data-page-node-id="IIyWAjrW5BAZvvQBiqJ1GX">修改排數／列數會保留原有座位資料；其餘設定即時生效並自動儲存。所有設定與編輯內容存於本機瀏覽器，關閉不流失；可用「匯出 JSON」備份、他處「匯入 JSON」還原；「匯出 CSV」可取得完整座位名單（桌名／座位／姓名／狀態）供 Excel 整理。</p>
     </div><!-- /gridControls -->
   </details>
 
-  <details class="cfg" id="autoPanel">
-    <summary>名單自動排位（禮賓規則）</summary>
-    <p class="hint" style="margin-top:8px;">貼上「按尊次排列」的名單，系統依單主位／雙主位與以右／左為先的禮賓規則，由中央向兩側、前排到後排自動排位。雙主位會預留中央兩個座位為主位投影。</p>
-    <div class="cfg-grid" style="grid-template-columns:1fr;">
-      <label>名單（每行一位；亦可用 、或 ，分隔）
+  <details class="cfg" id="autoPanel" data-page-node-id="FU6YKdgQTIF7GuF1E8Z0vD">
+    <summary data-page-node-id="l2xrmtfWghZBIAzJyHhuCa">名單自動排位（禮賓規則）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="PLLpzVdFMdAjaThs4YdQQS">貼上「按尊次排列」的名單，系統依單主位／雙主位與以右／左為先的禮賓規則，由中央向兩側、前排到後排自動排位。雙主位會預留中央兩個座位為主位投影。</p>
+    <div class="cfg-grid" style="grid-template-columns:1fr;" data-page-node-id="21L2mZBi8vtXxfxUn0CASS">
+      <label data-page-node-id="68r5qpHQPgoep6NSztj6Pq">名單（每行一位；亦可用 、或 ，分隔）
         <textarea id="nameList" rows="5" style="font-family:inherit;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:44px;resize:vertical;"></textarea>
       </label>
     </div>
-    <div class="row" style="margin-top:10px;gap:18px;flex-wrap:wrap;">
-      <div class="grp"><span class="lbl">主位模式</span>
-        <div class="row">
-          <button id="modeSingle" class="active" type="button" onclick="setAutoMode('single')">單主位</button>
-          <button id="modeDual" type="button" onclick="setAutoMode('dual')">雙主位</button>
+    <div class="row" style="margin-top:10px;gap:18px;flex-wrap:wrap;" data-page-node-id="AkZCU3hf7nojuzH4U11pvq">
+      <div class="grp" data-page-node-id="lZ51DAofdbLwPGa8gAB1cH"><span class="lbl" data-page-node-id="VsDtAy8FZjKrn9j5GB4stu">主位模式</span>
+        <div class="row" data-page-node-id="KcBnTRtRhYeYokYwgoXD6o">
+          <button id="modeSingle" class="active" type="button" onclick="setAutoMode('single')" data-page-node-id="a7McXSkKEGMlCfyRfTd8GQ">單主位</button>
+          <button id="modeDual" type="button" onclick="setAutoMode('dual')" data-page-node-id="SgOeEFVzvrXBFfHyNsA9BZ">雙主位</button>
         </div>
       </div>
-      <div class="grp"><span class="lbl">優先方向</span>
-        <div class="row">
-          <button id="dirRight" class="active" type="button" onclick="setAutoDir('right')">以右為先（澳門）</button>
-          <button id="dirLeft" type="button" onclick="setAutoDir('left')">以左為先（內地）</button>
+      <div class="grp" data-page-node-id="7dkj1tiHwDkAgrGSy5VGNR"><span class="lbl" data-page-node-id="BB37AIIuBo1cWMH3HBB8KD">優先方向</span>
+        <div class="row" data-page-node-id="FrBAUJjBF0FoP2zd3674EV">
+          <button id="dirRight" class="active" type="button" onclick="setAutoDir('right')" data-page-node-id="X6L02JcHDQsXU9hda6yp7A">以右為先（澳門）</button>
+          <button id="dirLeft" type="button" onclick="setAutoDir('left')" data-page-node-id="vBxSvWoJdMIYxLGRcAPdMP">以左為先（內地）</button>
         </div>
       </div>
     </div>
-    <div class="row" style="margin-top:10px;align-items:center;gap:10px;flex-wrap:wrap;">
-      <label class="chk" style="font-size:13px;"><input id="autoEmptyOnly" type="checkbox" checked> 只填入空白座位（不覆蓋已有姓名）</label>
-      <div id="autoTableWrap" class="row" style="margin-top:8px;align-items:center;gap:10px;display:none;">
-        <span class="lbl">目標圓桌</span>
-        <select id="autoTable"></select>
-        <span class="hint" style="margin:0;">依「以右／左為先」由主位向兩側環狀扇出。</span>
+    <div class="row" style="margin-top:10px;align-items:center;gap:10px;flex-wrap:wrap;" data-page-node-id="w7mQeiGnwM4BCiUWUMN1kh">
+      <label class="chk" style="font-size:13px;" data-page-node-id="sefbmGGuZMObaLpDcomFrt"><input id="autoEmptyOnly" type="checkbox" checked data-page-node-id="KBP7njghWddXUxp0PhbYoi"> 只填入空白座位（不覆蓋已有姓名）</label>
+      <div id="autoTableWrap" class="row" style="margin-top:8px;align-items:center;gap:10px;display:none;" data-page-node-id="scH0qdZlm4pezW6HXQxUSf">
+        <span class="lbl" data-page-node-id="0blH7jqXOopnqIjUZbwbq3">目標圓桌</span>
+        <select id="autoTable" data-page-node-id="19SyB4J03dJDE90cWbfsvN"></select>
+        <span class="hint" style="margin:0;" data-page-node-id="H5rgL7LUpr477tZuuIip0W">依「以右／左為先」由主位向兩側環狀扇出。</span>
       </div>
-      <button class="primary" type="button" onclick="autoAssign()">自動排位</button>
-      <button class="ghost" type="button" onclick="clearAuto()">清除剛排的名單</button>
+      <button class="primary" type="button" onclick="autoAssign()" data-page-node-id="ZW8wFFRYSlFrrS6JKmfrwF">自動排位</button>
+      <button class="ghost" type="button" onclick="clearAuto()" data-page-node-id="D8Xt9nF1WxFRoPpKUcWZpC">清除剛排的名單</button>
     </div>
-    <div id="autoPreview" class="hint" style="margin-top:10px;background:#f9fafb;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:20px;"></div>
-    <div id="autoResult" class="hint" style="margin-top:8px;color:var(--brand);font-weight:600;"></div>
+    <div id="autoPreview" class="hint" style="margin-top:10px;background:#f9fafb;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:20px;" data-page-node-id="QgDba0dKbK57ZRJfhicjOD"></div>
+    <div id="autoResult" class="hint" style="margin-top:8px;color:var(--brand);font-weight:600;" data-page-node-id="dI5lE4WVLWx8aycnzs3OIa"></div>
   </details>
 
-  <details class="cfg" id="exitPanel" open>
-    <summary>出入口設定（場地出入口位置）</summary>
-    <p class="hint" style="margin-top:8px;">設定場地的入口／出口位置，可拖動「沿邊位置」或點擊圖上標記編輯。每個出入口可選上／下／左／右四邊與該邊上的相對位置；入口為綠、出口為紅、出入口為藍。</p>
-    <div id="exitList" class="stage-list"></div>
-    <button id="addExit" class="ghost">＋新增出入口</button>
+  <details class="cfg" id="exitPanel" open data-page-node-id="552YxzBjcEupzruuo24h6I">
+    <summary data-page-node-id="7xaaYgDrXyFWTSNNTglu7z">出入口設定（場地出入口位置）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="MZfTaMyRsqaYbVCNCYmAGc">設定場地的入口／出口位置，可拖動「沿邊位置」或點擊圖上標記編輯。每個出入口可選上／下／左／右四邊與該邊上的相對位置；入口為綠、出口為紅、出入口為藍。</p>
+    <div id="exitList" class="stage-list" data-page-node-id="S5JwTPfNRCMtju5LqlGG7u"></div>
+    <button id="addExit" class="ghost" data-page-node-id="mTbp4pixSvAHAAwQEHKkvj">＋新增出入口</button>
   </details>
 
-  <details class="cfg" id="screenPanel" open>
-    <summary>投影屏幕設定（可編輯位置／多屏幕）</summary>
-    <p class="hint" style="margin-top:8px;">每個屏幕可設「方向」：上方橫向、左側直向、右側直向；並可設定名稱、X／Y 位置與長度。也可直接點擊圖上屏幕編輯。場地有多個屏幕時，按下方按鈕增加（例如場地兩側直立屏幕）。</p>
-    <div id="screenList" class="stage-list"></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-      <button id="addScreenTop" class="ghost">＋上方屏幕</button>
-      <button id="addScreenLeft" class="ghost">＋左側直向</button>
-      <button id="addScreenRight" class="ghost">＋右側直向</button>
-    </div>
-  </details>
-
-  <details class="cfg" id="tablePanel" style="display:none;">
-    <summary>圓桌設定（宴請模式）</summary>
-    <p class="hint" style="margin-top:8px;">新增／刪除圓桌，每桌 8–20 個座位；可標記「主桌」（司長所在）。在圖上直接拖曳圓桌本體可移動位置；點擊座位圈可填姓名／狀態。</p>
-    <div id="tableList" class="stage-list"></div>
-    <button id="addTable" class="ghost">＋新增圓桌</button>
-  </details>
-
-  <details class="cfg" id="meetingControls" style="display:none;">
-    <summary>會議桌設定（會議模式）</summary>
-    <p class="hint" style="margin-top:8px;">單張長方形會議桌，座位圍坐四周：上下兩長邊為一般席位，左右兩短邊為主位（金色標「主」）。可調整桌名、長／短邊座位數與桌型尺寸；在圖上直接拖曳桌面可移動整張會議桌。</p>
-    <div class="cfg-grid">
-      <label>桌名<input id="cfgMTable" type="text"></label>
-      <label>長邊每邊座位數（1–12）<input id="cfgMPL" type="number" min="1" max="12"></label>
-      <label>短邊每邊主位數（1–4）<input id="cfgMPS" type="number" min="1" max="4"></label>
-      <label>桌寬（長邊長度，200–900）<input id="cfgMW" type="number" min="200" max="900"></label>
-      <label>桌高（短邊長度，120–400）<input id="cfgMH" type="number" min="120" max="400"></label>
+  <details class="cfg" id="screenPanel" open data-page-node-id="EsZVtvsn0HFTPId8UVooHx">
+    <summary data-page-node-id="uSM9RUgvhzmJyzMY616kNo">投影屏幕設定（可編輯位置／多屏幕）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="zDohrbxT9GZFqSGFz0EBMt">每個屏幕可設「方向」：上方橫向、左側直向、右側直向；並可設定名稱、X／Y 位置與長度。也可直接點擊圖上屏幕編輯。場地有多個屏幕時，按下方按鈕增加（例如場地兩側直立屏幕）。</p>
+    <div id="screenList" class="stage-list" data-page-node-id="ndsV06HSFwvpigG8KEOIvL"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;" data-page-node-id="s8kEpK096muELlWqrGKnJS">
+      <button id="addScreenTop" class="ghost" data-page-node-id="NzOjCfYGNbHyelrLtdx4ou">＋上方屏幕</button>
+      <button id="addScreenLeft" class="ghost" data-page-node-id="7aXgq69rlJgPCpWaLo5GKf">＋左側直向</button>
+      <button id="addScreenRight" class="ghost" data-page-node-id="OSCHhgyjo1akhgybECUXHg">＋右側直向</button>
     </div>
   </details>
 
-  <details class="cfg" id="staffControls" style="display:none;">
-    <summary>工作人員座位區（座談會／會議模式）</summary>
-    <p class="hint" style="margin-top:8px;">於場地兩側或最後方安排工作人員（如接待、統籌、技術、記錄）座位區；座位可點擊填寫「姓名／部門／機構／職稱」，與與會者座位編輯方式一致，並會併入下方「嘉賓名單」。兩側為直向排列，後方為橫排區塊。</p>
-    <div class="cfg-grid">
-      <label class="chk" style="grid-column:1/-1;"><input id="cfgStaffOn" type="checkbox"> 啟用工作人員座位區</label>
-      <label>區域名稱<input id="cfgStaffLabel" type="text" placeholder="如：工作人員座位區"></label>
-      <label>位置<select id="cfgStaffPos">
-        <option value="both">兩側</option>
-        <option value="left">左側</option>
-        <option value="right">右側</option>
-        <option value="back">後方</option>
+  <details class="cfg" id="tablePanel" style="display:none;" data-page-node-id="IPSV6yNw6aCu3Es2PEcbF3">
+    <summary data-page-node-id="8ZqPLPHXldT11lkv2H0zEI">圓桌設定（宴請模式）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="xTdTVDniS8MZGyUKbv6xbv">新增／刪除圓桌，每桌 8–20 個座位；可標記「主桌」（司長所在）。在圖上直接拖曳圓桌本體可移動位置；點擊座位圈可填姓名／狀態。</p>
+    <div id="tableList" class="stage-list" data-page-node-id="2WnHzR3oaBD3QT6XtoPQuV"></div>
+    <button id="addTable" class="ghost" data-page-node-id="pnaVhMdJu02iTxhq7INUDR">＋新增圓桌</button>
+  </details>
+
+  <details class="cfg" id="meetingControls" style="display:none;" data-page-node-id="SeIHzaCryb8z1eYVbFT25V">
+    <summary data-page-node-id="cLGBQLLHC66mNz7qERr6W7">會議桌設定（會議模式）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="MYGsi9eVWUDHoP2ZBWRO0N">單張長方形會議桌，座位圍坐四周：上下兩長邊為一般席位，左右兩短邊為主位（金色標「主」）。可調整桌名、長／短邊座位數與桌型尺寸；在圖上直接拖曳桌面可移動整張會議桌。</p>
+    <div class="cfg-grid" data-page-node-id="NSSA7HQV0v1MnXfKFALzBe">
+      <label data-page-node-id="PX9LqcFqrgVN9aJnNm37Mq">桌名<input id="cfgMTable" type="text" data-page-node-id="BfQNNm2XpIAkL4JhtyyWYZ"></label>
+      <label data-page-node-id="TLQMK6pITeIBdIiLJHKJeB">長邊每邊座位數（1–12）<input id="cfgMPL" type="number" min="1" max="12" data-page-node-id="3n0bmssHkYjgd9oeOVTg2F"></label>
+      <label data-page-node-id="5nnwg3K4vUEdIqR83UGzKe">短邊每邊主位數（1–4）<input id="cfgMPS" type="number" min="1" max="4" data-page-node-id="VCe4l8T7pcT20dp8EwVexm"></label>
+      <label data-page-node-id="cGuzX74EBhXFFj85BtTCYq">桌寬（長邊長度，200–900）<input id="cfgMW" type="number" min="200" max="900" data-page-node-id="S6Hq9njlv497HwnZhjSBd9"></label>
+      <label data-page-node-id="cCPuE25JCc1ouuEBOINtNv">桌高（短邊長度，120–400）<input id="cfgMH" type="number" min="120" max="400" data-page-node-id="sKX1EfcWBlb4gyFINQRkMC"></label>
+    </div>
+  </details>
+
+  <details class="cfg" id="staffControls" style="display:none;" data-page-node-id="iAlSTpFlQXRXRCHFbCwNHS">
+    <summary data-page-node-id="A2zIBE4k4tXZiCNu6A3TRx">工作人員座位區（座談會／會議模式）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="FVcFjDaG06vGk5utAGhdRz">於場地兩側或最後方安排工作人員（如接待、統籌、技術、記錄）座位區；座位可點擊填寫「姓名／部門／機構／職稱」，與與會者座位編輯方式一致，並會併入下方「嘉賓名單」。兩側為直向排列，後方為橫排區塊。</p>
+    <div class="cfg-grid" data-page-node-id="hILKZRIaSgg0P2Bm7PxS7r">
+      <label class="chk" style="grid-column:1/-1;" data-page-node-id="rpHEJ0jhJArwcXvfuTiqXA"><input id="cfgStaffOn" type="checkbox" data-page-node-id="eDpGQjRTWQMVPe697wSmYf"> 啟用工作人員座位區</label>
+      <label data-page-node-id="08xMcloRQOT4gg8OJag2ZS">區域名稱<input id="cfgStaffLabel" type="text" placeholder="如：工作人員座位區" data-page-node-id="rLd1P4anttXLEe2eGVoQap"></label>
+      <label data-page-node-id="tGY1astUMOaFEP2sltrg4y">位置<select id="cfgStaffPos" data-page-node-id="2Tj7Lz2MMq8ECHqcT5FPt7">
+        <option value="both" data-page-node-id="BEYwq2qCzD8pwWlPbniIf3">兩側</option>
+        <option value="left" data-page-node-id="Ay8Zgdn3m8YypJvDWNDFYS">左側</option>
+        <option value="right" data-page-node-id="Zo1yrLLFpv0Ub2ejl3IlVw">右側</option>
+        <option value="back" data-page-node-id="jDqVLBFYCK1Yj3jFu4MlmE">後方</option>
       </select></label>
-      <label id="labStaffSide">每側座位數（1–20）<input id="cfgStaffSide" type="number" min="1" max="20"></label>
-      <label id="labStaffBR">後方排數（1–4）<input id="cfgStaffBackR" type="number" min="1" max="4"></label>
-      <label id="labStaffBC">後方位數（1–16）<input id="cfgStaffBackC" type="number" min="1" max="16"></label>
+      <label id="labStaffSide" data-page-node-id="S5RnBrY98sIBK7Fv5sD9aW">每側座位數（1–20）<input id="cfgStaffSide" type="number" min="1" max="20" data-page-node-id="K61W2LplCiMFRpPes2fbS1"></label>
+      <label id="labStaffBR" data-page-node-id="nKq6BsAUq0dQJIdJEioc7t">後方排數（1–4）<input id="cfgStaffBackR" type="number" min="1" max="4" data-page-node-id="HcBTwAqHOw6kxHsaZ0AuMl"></label>
+      <label id="labStaffBC" data-page-node-id="gX0X2EkbjzDGReI7TqQfIo">後方位數（1–16）<input id="cfgStaffBackC" type="number" min="1" max="16" data-page-node-id="BX4SKfQ6jsMURTMwuBGBcw"></label>
     </div>
   </details>
 
-  <details class="cfg" id="outdoorControls" style="display:none;">
-    <summary>戶外發佈設定（現場發佈場景）</summary>
-    <p class="hint" style="margin-top:8px;">適用於康公廟前地等戶外現場發佈會：預先排定「背景板 → 發佈台主位 → 攝影區 → 傳媒區 → 嘉賓區」的分區站位；設施/裝置改為自由定位，不佔用固定區塊。背景板、發佈台、傳媒區、嘉賓區均可個別以開關設為「有／沒有」；可於下方新增「設施/裝置」（投影屏幕、音響台、簽名台等），各設施可改名、選樣式、開關或刪除；<b>在圖上直接拖曳設施條即可移動位置</b>，點擊設施條（或側欄清單按「位置 X,Y」）可精確設 X/Y 座標、寬高與標籤字體大小。</p>
-    <div class="cfg-grid">
-      <label class="chk" style="grid-column:1/-1;"><input id="cfgOBackdropOn" type="checkbox" checked> 設背景板（有／沒有）</label>
-      <label>背景板文字<input id="cfgOBackdrop" type="text" placeholder="如：三五規劃宣傳發佈會"></label>
-      <label class="chk" style="grid-column:1/-1;"><input id="cfgOPodOn" type="checkbox" checked> 設發佈台（有／沒有）</label>
-      <label>發佈台名稱<input id="cfgOPodLabel" type="text" placeholder="如：發佈台"></label>
-      <label>發佈台主位數（1–9）<input id="cfgOPodCount" type="number" min="1" max="9"></label>
-      <label>攝影區名稱<input id="cfgOPhoto" type="text" placeholder="如：攝影區（記者拍攝位）"></label>
-      <label class="chk" style="grid-column:1/-1;"><input id="cfgOMediaOn" type="checkbox" checked> 設傳媒區（有／沒有）</label>
-      <label>傳媒區名稱<input id="cfgOMediaLabel" type="text" placeholder="如：傳媒區"></label>
-      <label>傳媒區排數（1–8）<input id="cfgOMediaRows" type="number" min="1" max="8"></label>
-      <label>傳媒區每行座位（1–16）<input id="cfgOMediaCols" type="number" min="1" max="16"></label>
-      <label class="chk" style="grid-column:1/-1;"><input id="cfgOGuestOn" type="checkbox" checked> 設嘉賓區（有／沒有）</label>
-      <label>嘉賓區名稱<input id="cfgOGuestLabel" type="text" placeholder="如：嘉賓區"></label>
-      <label>嘉賓區排數（1–8）<input id="cfgOGuestRows" type="number" min="1" max="8"></label>
-      <label>嘉賓區每行座位（1–16）<input id="cfgOGuestCols" type="number" min="1" max="16"></label>
-      <div style="grid-column:1/-1; margin-top:8px; padding-top:10px; border-top:1px dashed var(--line);">
-        <div class="row" style="align-items:center; gap:10px; margin-bottom:6px;">
-          <span class="lbl" style="font-weight:600;">設施/裝置</span>
-          <span class="hint" style="margin:0;">（投影屏幕、音響台、簽名台等現場裝置）</span>
+  <details class="cfg" id="outdoorControls" style="display:none;" data-page-node-id="E7uvQ6tDMAC3lNAH4bNfDV">
+    <summary data-page-node-id="lUIHh9dqRFIO5q7elMZlIC">戶外發佈設定（現場發佈場景）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="WhDPd91KLpnf64KKnoWnf0">適用於康公廟前地等戶外現場發佈會：預先排定「背景板 → 發佈台主位 → 攝影區 → 傳媒區 → 嘉賓區」的分區站位；設施/裝置改為自由定位，不佔用固定區塊。背景板、發佈台、傳媒區、嘉賓區均可個別以開關設為「有／沒有」；可於下方新增「設施/裝置」（投影屏幕、音響台、簽名台等），各設施可改名、選樣式、開關或刪除；<b data-page-node-id="k9bBRPYbWsd0nQWYrraP0t">在圖上直接拖曳設施條即可移動位置</b>，點擊設施條（或側欄清單按「位置 X,Y」）可精確設 X/Y 座標、寬高與標籤字體大小。</p>
+    <div class="cfg-grid" data-page-node-id="DvCzzdXLpHZgCZsxNwv4X7">
+      <label class="chk" style="grid-column:1/-1;" data-page-node-id="RGtcU89eNXs0eP541Oa3zr"><input id="cfgOBackdropOn" type="checkbox" checked data-page-node-id="DQrMhwqQxjSItCiBL4liOY"> 設背景板（有／沒有）</label>
+      <label data-page-node-id="804Po22sAaIyeUsYHbS4wl">背景板文字<input id="cfgOBackdrop" type="text" placeholder="如：三五規劃宣傳發佈會" data-page-node-id="RENd09AdVspalE5JJHeg8s"></label>
+      <label class="chk" style="grid-column:1/-1;" data-page-node-id="AnlsiqW64tjzm7TXhXBBVZ"><input id="cfgOPodOn" type="checkbox" checked data-page-node-id="hsLcRwOpxq3WwFNbxEGzfK"> 設發佈台（有／沒有）</label>
+      <label data-page-node-id="qABBqIHQe2xSdT5Cy60An1">發佈台名稱<input id="cfgOPodLabel" type="text" placeholder="如：發佈台" data-page-node-id="QAIAZyFBL3gPrt408xKagR"></label>
+      <label data-page-node-id="KIrK90FPIKECJLx1ne5N5c">發佈台主位數（1–9）<input id="cfgOPodCount" type="number" min="1" max="9" data-page-node-id="aq43Q8kLNwfOooqW6gRguy"></label>
+      <label data-page-node-id="f57XGjtxbL9KXEivE0OIUe">攝影區名稱<input id="cfgOPhoto" type="text" placeholder="如：攝影區（記者拍攝位）" data-page-node-id="8kGjH8Muc3Fj9TBsInNyfS"></label>
+      <label class="chk" style="grid-column:1/-1;" data-page-node-id="YUM4UuuZlIJHudBWzV0X7F"><input id="cfgOMediaOn" type="checkbox" checked data-page-node-id="EuOrpUUWdHFvZZJMn1rjxd"> 設傳媒區（有／沒有）</label>
+      <label data-page-node-id="cY8sRYE0KDLtAczNEDraBB">傳媒區名稱<input id="cfgOMediaLabel" type="text" placeholder="如：傳媒區" data-page-node-id="6DrRx5iH7xW8Y6QtWyLH7r"></label>
+      <label data-page-node-id="xjsGiaJbHvfDclmGaokaXm">傳媒區排數（1–8）<input id="cfgOMediaRows" type="number" min="1" max="8" data-page-node-id="E1zBgufo9fQmjgLk66O5wN"></label>
+      <label data-page-node-id="bDRctXBfFBqmej4w205MrM">傳媒區每行座位（1–16）<input id="cfgOMediaCols" type="number" min="1" max="16" data-page-node-id="wkq4o9gCig2y7eVE3yJ25I"></label>
+      <label class="chk" style="grid-column:1/-1;" data-page-node-id="gs0AIQFOSDfycvyk7QMsYR"><input id="cfgOGuestOn" type="checkbox" checked data-page-node-id="eDsQ9xd4TjULW2UkTuZlAr"> 設嘉賓區（有／沒有）</label>
+      <label data-page-node-id="qARpAN0Br7KLyI6Z6dJsqP">嘉賓區名稱<input id="cfgOGuestLabel" type="text" placeholder="如：嘉賓區" data-page-node-id="O9ajGQUMYvybkokdkYYsrc"></label>
+      <label data-page-node-id="QjT3x5K3Jy2wsDVEQ2rKpO">嘉賓區排數（1–8）<input id="cfgOGuestRows" type="number" min="1" max="8" data-page-node-id="XgOw3BO1Ro2fPDr1Xv76Xq"></label>
+      <label data-page-node-id="SsBPLf6HH4TxIqRBtgfP2w">嘉賓區每行座位（1–16）<input id="cfgOGuestCols" type="number" min="1" max="16" data-page-node-id="10PHpYUL8Z6foHW6JWWqOk"></label>
+      <div style="grid-column:1/-1; margin-top:8px; padding-top:10px; border-top:1px dashed var(--line);" data-page-node-id="8vyGFTySzHvPDV1VJDpzJU">
+        <div class="row" style="align-items:center; gap:10px; margin-bottom:6px;" data-page-node-id="7Wr82cV0Mwr7ce4mxKjfMm">
+          <span class="lbl" style="font-weight:600;" data-page-node-id="yGzcfGzyIasKaqRrFFZAQx">設施/裝置</span>
+          <span class="hint" style="margin:0;" data-page-node-id="A7o7lGDAuQYBLo7ZoCB8GR">（投影屏幕、音響台、簽名台等現場裝置）</span>
         </div>
-        <div id="outFacList" class="fac-list"></div>
-        <button id="btnAddFac" class="ghost" type="button" style="margin-top:6px;">＋ 新增設施/裝置</button>
+        <div id="outFacList" class="fac-list" data-page-node-id="0TOSJ34GUYoT9i6HvHlHn6"></div>
+        <button id="btnAddFac" class="ghost" type="button" style="margin-top:6px;" data-page-node-id="GcZbjkcTYrJGeKtJGZcQDl">＋ 新增設施/裝置</button>
       </div>
     </div>
   </details>
 
 
-  <details class="cfg" id="recordsPanel">
-    <summary>座位圖記錄庫（參考用）</summary>
-    <p class="hint" style="margin-top:8px;">把排好的場地與座位安排「存為記錄」，日後類似活動可回看參考排位與場地設置，或一鍵套用為新場地底稿。記錄存於本機瀏覽器（與專案管理系統共用同一記錄庫）。</p>
-    <div class="cfg-grid" style="grid-template-columns:1fr 1fr;">
-      <label>記錄名稱<input id="recName" type="text" placeholder="如：9/7 經財範疇專場交流會"></label>
-      <label>活動日期<input id="recDate" type="date"></label>
+  <details class="cfg" id="recordsPanel" data-page-node-id="7oLxbTXNmakhBMZG1q3WGJ">
+    <summary data-page-node-id="9O7y851LpPwVXQIZtUQdtR">座位圖記錄庫（參考用）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="5Go6vSuwjMjQQxaqd5TEyb">把排好的場地與座位安排「存為記錄」，日後類似活動可回看參考排位與場地設置，或一鍵套用為新場地底稿。記錄存於本機瀏覽器（與專案管理系統共用同一記錄庫）。</p>
+    <div class="cfg-grid" style="grid-template-columns:1fr 1fr;" data-page-node-id="5dE6Ibo95LTtg7H9HVzhTM">
+      <label data-page-node-id="tHSB6vMhoM5DhgYowbcYbx">記錄名稱<input id="recName" type="text" placeholder="如：9/7 經財範疇專場交流會" data-page-node-id="80BT1BqoWGiWIZWhZNKkWh"></label>
+      <label data-page-node-id="WjrgyQ8ZNbTP9lL8JSQ8D4">活動日期<input id="recDate" type="date" data-page-node-id="99d9JI5lJ4vcPg6NkengiF"></label>
     </div>
-    <label style="display:block;margin:8px 0;">備註<input id="recNotes" type="text" placeholder="如：座位較緊、雙主位、兩側直向屏幕"></label>
-    <div class="row" style="margin-top:6px;gap:10px;flex-wrap:wrap;align-items:center;">
-      <button class="primary" type="button" onclick="saveRecord()">＋ 儲存為記錄</button>
-      <button class="ghost" type="button" onclick="exportAllRec()">整庫匯出 JSON</button>
-      <button class="ghost" type="button" onclick="document.getElementById('recFile').click()">整庫匯入 JSON</button>
-      <input id="recFile" type="file" accept="application/json,.json" style="display:none" onchange="importAllRec(event)">
-      <span id="recMsg" class="hint" style="margin:0;color:var(--brand);font-weight:600;"></span>
+    <label style="display:block;margin:8px 0;" data-page-node-id="pDkrujv43eie3lBBI8gA1I">備註<input id="recNotes" type="text" placeholder="如：座位較緊、雙主位、兩側直向屏幕" data-page-node-id="Zs1JyLCItKlgOkwpW5gsKs"></label>
+    <div class="row" style="margin-top:6px;gap:10px;flex-wrap:wrap;align-items:center;" data-page-node-id="ItUlpy3H0kixOqhjpMbFAK">
+      <button class="primary" type="button" onclick="saveRecord()" data-page-node-id="freHWdAmyCk5ALoHrceVah">＋ 儲存為記錄</button>
+      <button class="ghost" type="button" onclick="exportAllRec()" data-page-node-id="5sHpCj0Zy0IVzkTLCj0f2d">整庫匯出 JSON</button>
+      <button class="ghost" type="button" onclick="document.getElementById('recFile').click()" data-page-node-id="A60J35bQdhG2Mn8BSfOepr">整庫匯入 JSON</button>
+      <input id="recFile" type="file" accept="application/json,.json" style="display:none" onchange="importAllRec(event)" data-page-node-id="TSSHomWbgKNxAG9GdiO8rI">
+      <span id="recMsg" class="hint" style="margin:0;color:var(--brand);font-weight:600;" data-page-node-id="0WpmDNnYnQPRfwfGYKmdcT"></span>
     </div>
-    <div id="recList" style="margin-top:12px;"></div>
+    <div id="recList" style="margin-top:12px;" data-page-node-id="aXaqkfKRlyhuXLRtEJUKxU"></div>
   </details>
 
-  <div class="svgbox">
-    <svg id="stage" viewBox="0 0 1000 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="座位模擬圖"></svg>
-    <div id="pop" class="pop"></div>
-    <div id="zoomCtl" class="zoom-ctl no-print">
-      <button type="button" aria-label="放大" onclick="zoomIn()">＋</button>
-      <div class="zlabel" id="zoomPct">100%</div>
-      <button type="button" aria-label="縮小" onclick="zoomOut()">－</button>
-      <button type="button" aria-label="重置視圖" onclick="resetZoom()">⤢</button>
+  <div class="svgbox" data-page-node-id="FjPSJLClZ9QsCrA2YzYGlm">
+    <svg id="stage" viewBox="0 0 1000 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="座位模擬圖" data-page-node-id="AFljFlEtmwIVY0UQsSIzGf"></svg>
+    <div id="pop" class="pop" data-page-node-id="JtLDPfP2yEysTGBUQrwFND"></div>
+    <div id="zoomCtl" class="zoom-ctl no-print" data-page-node-id="SfN0loKuXX2UEq6CoNpEZ1">
+      <button type="button" aria-label="放大" onclick="zoomIn()" data-page-node-id="MqFn8CfH52W8rsjx7SNCiu">＋</button>
+      <div class="zlabel" id="zoomPct" data-page-node-id="V3dzoAyFYOBQppJW4gVvJp">100%</div>
+      <button type="button" aria-label="縮小" onclick="zoomOut()" data-page-node-id="rWPr4R0rLiFHpdv07h4JC6">－</button>
+      <button type="button" aria-label="重置視圖" onclick="resetZoom()" data-page-node-id="YlbCM3JBfhEwzSVe3Jcg3T">⤢</button>
     </div>
   </div>
 
-  <details class="cfg" id="guestPanel" open>
-    <summary>嘉賓名單（排位清單 · 人數／姓名／部門／職稱一覽）</summary>
-    <p class="hint" style="margin-top:8px;">依目前座位圖的排位順序自動產生名單（含預覽圖）。在座位上按一下，填寫「姓名／部門／機構／職稱」，名單即時更新；可匯出 DOCX（含預覽圖）、CSV，或直接列印／存成 PDF。</p>
-    <div class="row gl-ctl no-print" style="margin:8px 0; gap:10px; flex-wrap:wrap; align-items:center;">
-      <span class="lbl">顯示</span>
-      <select id="glFilter">
-        <option value="named">僅有姓名者（正式名單）</option>
-        <option value="all">全部座位（含空缺）</option>
-        <option value="empty">僅空缺座位</option>
+  <details class="cfg" id="guestPanel" open data-page-node-id="10gLqyOlsCURabmTIEwdPC">
+    <summary data-page-node-id="LEQUqogZlGVuMTyA88gjB1">嘉賓名單（排位清單 · 人數／姓名／部門／職稱一覽）</summary>
+    <p class="hint" style="margin-top:8px;" data-page-node-id="tGTB25GcqZ46B6Ikuvmyxu">依目前座位圖的排位順序自動產生名單（含預覽圖）。在座位上按一下，填寫「姓名／部門／機構／職稱」，名單即時更新；可匯出 DOCX（含預覽圖）、CSV，或直接列印／存成 PDF。</p>
+    <div class="row gl-ctl no-print" style="margin:8px 0; gap:10px; flex-wrap:wrap; align-items:center;" data-page-node-id="Qt6pcHTjhYF4jmtj8dvmMg">
+      <span class="lbl" data-page-node-id="sCZp5bsoS6eh6dcErZxIgV">顯示</span>
+      <select id="glFilter" data-page-node-id="Hzk3hbF0DoKvpZSyOAfah5">
+        <option value="named" data-page-node-id="XLQeyGjIg5okmnOTc15DGU">僅有姓名者（正式名單）</option>
+        <option value="all" data-page-node-id="tMp1bGkJpTWBTAJMRAsygj">全部座位（含空缺）</option>
+        <option value="empty" data-page-node-id="qGitWNSw0BIhgUdybepEdn">僅空缺座位</option>
       </select>
-      <span class="lbl">排序</span>
-      <select id="glSort">
-        <option value="seat">依排位順序</option>
-        <option value="zone">依區域分組</option>
-        <option value="name">依姓名排序</option>
+      <span class="lbl" data-page-node-id="35f2bOIY1eUOgsP90dDaYO">排序</span>
+      <select id="glSort" data-page-node-id="6U0LpsMAO1lLcI1VsMncQt">
+        <option value="seat" data-page-node-id="8erD6mw0hZu3pg65IhZKVH">依排位順序</option>
+        <option value="zone" data-page-node-id="NldavGm4qesTtS5wsx8jFw">依區域分組</option>
+        <option value="name" data-page-node-id="umYplcl0MoRSlSiIOfsxxD">依姓名排序</option>
       </select>
-      <label class="chk"><input id="glPreviewOn" type="checkbox" checked> 顯示預覽圖</label>
-      <input id="glFind" type="text" placeholder="搜尋姓名／部門／職稱">
-      <span class="lbl">編號</span>
-      <select id="glNumStyle">
-        <option value="arabic">阿拉伯（1,2,3）</option>
-        <option value="chinese">中文（一,二,三）</option>
+      <label class="chk" data-page-node-id="2UKBMuf5PkHA4EHA53KHIz"><input id="glPreviewOn" type="checkbox" checked data-page-node-id="WuwGRmKJE5xcNgM3b2Mcuu"> 顯示預覽圖</label>
+      <span class="lbl" data-page-node-id="aFe4MEzBFdUFfH5nzK0by1">預覽圖大小</span>
+      <select id="glPvScale" data-page-node-id="9mQndbbjC23kRwiBEXEQQM">
+        <option value="auto" data-page-node-id="17uPwWAUyKYXc5LzoFxBO2">自動（限高 480px）</option>
+        <option value="50" data-page-node-id="r1ODatN2gAuHvN710Vtq1E">50%</option>
+        <option value="75" data-page-node-id="Aj4G4WF4O5NE5vmk1JTEkz">75%</option>
+        <option value="100" data-page-node-id="PDTj44DHVvsIMG91xQyBeF">100%（配合欄寬）</option>
+        <option value="150" data-page-node-id="QoCOIS5doTOol6JkkaPw2p">150%</option>
+        <option value="200" data-page-node-id="ILSug0bdWsmJCDi1i6EhaM">200%</option>
+      </select>
+      <input id="glFind" type="text" placeholder="搜尋姓名／部門／職稱" data-page-node-id="sPCxGhfrZc0iaeEm2ye6uk">
+      <span class="lbl" data-page-node-id="W3v3dbDCwCbhr0ZjBywtFS">編號</span>
+      <select id="glNumStyle" data-page-node-id="R278uUSP9bYibUgSSsNSMr">
+        <option value="arabic" data-page-node-id="mtZZSDfTK0BDf9W2ZkhOxP">阿拉伯（1,2,3）</option>
+        <option value="chinese" data-page-node-id="YdQelE6dq1l3TZrN7hBgJz">中文（一,二,三）</option>
       </select>
     </div>
-    <div class="row no-print" style="margin:6px 0 12px; gap:10px; flex-wrap:wrap; align-items:center;">
-      <button class="primary" type="button" onclick="exportGuestDocx()">匯出 DOCX（含預覽圖）</button>
-      <button class="ghost" type="button" onclick="exportGuestCSV()">匯出 CSV</button>
-      <button class="ghost" type="button" onclick="printGuest()">列印／存成 PDF</button>
-      <span id="glMsg" class="hint" style="margin:0; color:var(--brand); font-weight:600;"></span>
+    <div class="row no-print" style="margin:6px 0 12px; gap:10px; flex-wrap:wrap; align-items:center;" data-page-node-id="P3tYwHYc6IgZNpmQoCafJA">
+      <button class="primary" type="button" onclick="exportGuestDocx()" data-page-node-id="WTqwrRDAJAwROqa5ahMj9Q">匯出 DOCX（含預覽圖）</button>
+      <button class="ghost" type="button" onclick="exportGuestCSV()" data-page-node-id="J0a2obVXK6z4tz8U4PC9Jf">匯出 CSV</button>
+      <button class="ghost" type="button" onclick="printGuest()" data-page-node-id="r45fgcmj5GG0c1Hj9U9pWt">列印／存成 PDF</button>
+      <button class="ghost" type="button" onclick="refreshGuestPreview()" data-page-node-id="IkSsa1iXfx1RJ923QzMBax">重新整理預覽圖</button>
+      <span id="glMsg" class="hint" style="margin:0; color:var(--brand); font-weight:600;" data-page-node-id="q0jaIQt2GwWFGkaSoByq1Y"></span>
     </div>
-    <div id="glStats" class="gl-stats"></div>
-    <div id="glPreview" class="gl-preview"></div>
-    <div id="glTableWrap" class="gl-table-wrap"></div>
+    <div id="glStats" class="gl-stats" data-page-node-id="dcEe55QvIIORm25KppbkRN"></div>
+    <div id="glPvInfo" class="gl-pvinfo" data-page-node-id="dC6UWaVRzPxSuIVAneJKyE"></div>
+    <div id="glPreview" class="gl-preview" data-page-node-id="htLefqt9BE0ngjnv2QArtM"></div>
+    <div id="glTableWrap" class="gl-table-wrap" data-page-node-id="OhxUOneNiv1RsgIwQnUe60"></div>
   </details>
 
-  <p class="hint">
-    <b>操作：</b>單擊座位 → 彈出選單選擇狀態並填寫姓名；單擊主講台方格 → 編輯該主位人名；上方「場地設定」可調整排數、列數、通道、主講台場景與停車區，套用於任意接待／活動場合。
+  <p class="hint" data-page-node-id="v918V1om9sAS8QVkbAms0z">
+    <b data-page-node-id="pLyQFXnXySVQ2BZQAgO2mZ">操作：</b>單擊座位 → 彈出選單選擇狀態並填寫姓名；單擊主講台方格 → 編輯該主位人名；上方「場地設定」可調整排數、列數、通道、主講台場景與停車區，套用於任意接待／活動場合。
   </p>
 </div>
 
@@ -456,6 +491,17 @@
 (function(){
   "use strict";
   var KEY = "wb_seatmap_state_v2";
+  var PV_KEY = "wb_seatmap_pvscale_v1";
+  var PV_MAXH = 480;   // 「自動」模式的預覽圖限高（px）
+
+  // 讀取 SVG 的 viewBox 作為「原圖尺寸」的唯一依據（高度會隨排數／停車區／圖例變動，不可寫死 760）
+  function parseVB(el){
+    var p=String((el && el.getAttribute && el.getAttribute("viewBox")) || "0 0 1000 760").split(/[\s,]+/).map(Number);
+    var W=p[2]||1000, H=p[3]||760;
+    if(!(W>0)) W=1000;
+    if(!(H>0)) H=760;
+    return {W:W, H:H};
+  }
 
   var DEFAULT_CONFIG = {
     activity: "三五規劃交流會",
@@ -736,6 +782,10 @@
 
     // 彈窗開啟時：SVG 剛整份重建，錨點元素已被丟棄，需重新定位（否則彈窗會跳到左上角）
     try{ if(pop && pop.style.display==="block" && typeof placePop==="function") placePop(); }catch(_){}
+
+    // 圖面高度會隨排數／停車區／圖例變動：若目前處於縮放狀態，須依新 viewBox 比例重算顯示尺寸，
+    // 否則會沿用舊比例造成上下留白或圖形被拉變形。
+    try{ if(typeof viewScale==="number" && viewScale>1 && typeof setZoom==="function") setZoom(viewScale); }catch(_){}
 
     // 同步工具列
     document.getElementById("btnPark").textContent="停車區："+(C.parking&&C.parking.enabled?"開":"關");
@@ -1947,7 +1997,8 @@
     var ay = sy + zoomBox.scrollTop;
     var f = scale/viewScale;
     var newW = zoomBox.clientWidth*scale;
-    var newH = newW*(760/1000);
+    var vbz = parseVB(zoomSvg);                 // 依實際 viewBox 比例，避免圖面被拉扁／拉長
+    var newH = newW*(vbz.H/vbz.W);
     zoomSvg.style.width=newW+"px";
     zoomSvg.style.height=newH+"px";
     zoomBox.scrollLeft = ax*f - sx;       // 保持錨點在手指／畫面原位
@@ -2262,18 +2313,33 @@
     return a||"座位圖";
   }
   window.exportSVG=function(){
-    var s=document.getElementById("stage").cloneNode(true);
+    var src=document.getElementById("stage");
+    var s=src.cloneNode(true);
     s.setAttribute("xmlns","http://www.w3.org/2000/svg");
+    var vb=parseVB(src);                       // 以原圖比例輸出，不受編輯區縮放的 inline 尺寸影響
+    s.removeAttribute("style");
+    s.setAttribute("width", vb.W); s.setAttribute("height", vb.H);
+    s.setAttribute("preserveAspectRatio","xMidYMid meet");
     var data=new XMLSerializer().serializeToString(s);
     downloadBlob(new Blob([data],{type:"image/svg+xml;charset=utf-8"}), baseName()+".svg");
   };
-  window.exportPNG=function(){
+  // 供 PNG／DOCX 點陣化：先清掉縮放留下的 inline 尺寸，確保輸出維持原圖比例
+  function serializeStageForRaster(){
     var svgEl=document.getElementById("stage");
-    var xml=new XMLSerializer().serializeToString(svgEl);
+    var vb=parseVB(svgEl);
+    var cl=svgEl.cloneNode(true);
+    cl.removeAttribute("style");
+    cl.setAttribute("width", vb.W); cl.setAttribute("height", vb.H);
+    cl.setAttribute("preserveAspectRatio","xMidYMid meet");
+    return { xml:new XMLSerializer().serializeToString(cl), W:vb.W, H:vb.H };
+  }
+  window.exportPNG=function(){
+    var r=serializeStageForRaster();
+    var xml=r.xml;
     var src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml);
     var img=new Image();
     img.onload=function(){
-      var scale=2, W=1000, H=VIEW_H;
+      var scale=2, W=r.W, H=r.H;
       var cv=document.createElement("canvas"); cv.width=W*scale; cv.height=H*scale;
       var ctx=cv.getContext("2d");
       ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,cv.width,cv.height);
@@ -2372,6 +2438,66 @@
         if(!state.seatsMedia) state.seatsMedia={};
         if(!state.seatsGuest) state.seatsGuest={};
         rebuildSeats(state); closePop(); save(); render(); syncConfigPanel();
+      }catch(err){ alert("讀取失敗："+err.message); }
+    };
+    reader.readAsText(f);
+    ev.target.value="";
+  };
+
+  /* ---------- 跨裝置同步：全部資料打包匯出／匯入（座位圖＋記錄庫＋顯示設定） ---------- */
+  // 用途：電腦 ↔ iPad ↔ iPhone 之間搬資料。資料存在各裝置的瀏覽器 localStorage，不會自動同步；
+  // 用 AirDrop／電郵／雲端硬碟把這個 JSON 檔傳到另一台裝置，再「匯入同步檔」即可完整還原。
+  var BUNDLE_TAG="wb-seatmap-bundle";
+  function fileStamp(){
+    var d=new Date(), p=function(n){ return (n<10?"0":"")+n; };
+    return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+"-"+p(d.getHours())+p(d.getMinutes());
+  }
+  window.exportBundle=function(){
+    try{
+      var sel=document.getElementById("glPvScale");
+      var bundle={
+        tag:BUNDLE_TAG, ver:1, exportedAt:new Date().toISOString(),
+        state: state,
+        records: recLoad(),
+        prefs: { pvScale: sel ? sel.value : null }
+      };
+      downloadBlob(new Blob([JSON.stringify(bundle,null,2)],{type:"application/json"}),
+        "座位圖_全部資料_"+fileStamp()+".json");
+      var msg=document.getElementById("glMsg")||document.getElementById("recMsg");
+      if(msg) msg.textContent="已匯出同步檔（座位圖＋"+ (bundle.records||[]).length +" 筆記錄）。傳到其他裝置後用「匯入同步檔」還原。";
+    }catch(err){ alert("匯出失敗："+err.message); }
+  };
+  window.importBundle=function(ev){
+    var f=ev.target.files&&ev.target.files[0]; if(!f) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var obj=JSON.parse(reader.result);
+        if(!obj || obj.tag!==BUNDLE_TAG){ alert("這不是本系統的同步檔。\n請選擇由「打包全部（同步檔）」匯出的 JSON。"); return; }
+        var nRec=(obj.records||[]).length;
+        if(!confirm("匯入後會【覆蓋】本機目前的座位圖與記錄庫（同步檔內含 "+nRec+" 筆記錄）。\n確定繼續？")) return;
+        if(!obj.state || !obj.state.config || !obj.state.seats){ alert("同步檔內容不完整（缺少座位圖資料）。"); return; }
+        state=obj.state;
+        if(!state.activeScenario||!state.scenarios[state.activeScenario]) state.activeScenario=Object.keys(state.scenarios)[0];
+        if(!state.seatsBanquet) state.seatsBanquet={};
+        if(!state.config.mode) state.config.mode="grid";
+        if(!state.config.banquet) state.config.banquet={tables:[]};
+        if(!state.seatsMeeting) state.seatsMeeting={};
+        if(!state.config.meeting) state.config.meeting={table:{label:"會議主桌",x:500,y:430,w:520,h:200,perLong:6,perShort:1}};
+        if(!state.config.outdoor) state.config.outdoor={ backdrop:{label:"",enabled:true}, podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8,enabled:true}, guest:{label:"嘉賓區",rows:3,cols:8,enabled:true} };
+        if(typeof state.config.showTitle==="undefined") state.config.showTitle=true;
+        if(!state.seatsPodium) state.seatsPodium={};
+        if(!state.seatsMedia) state.seatsMedia={};
+        if(!state.seatsGuest) state.seatsGuest={};
+        recSave(Array.isArray(obj.records)? obj.records : []);
+        var sel=document.getElementById("glPvScale");
+        if(sel && obj.prefs && obj.prefs.pvScale){
+          sel.value=obj.prefs.pvScale;
+          try{ localStorage.setItem(PV_KEY, String(obj.prefs.pvScale)); }catch(_){}
+        }
+        rebuildSeats(state); closePop(); save(); render(); syncConfigPanel();
+        var msg=document.getElementById("glMsg")||document.getElementById("recMsg");
+        if(msg) msg.textContent="已匯入同步檔（"+nRec+" 筆記錄）。本機資料已更新為同步檔內容。";
       }catch(err){ alert("讀取失敗："+err.message); }
     };
     reader.readAsText(f);
@@ -2738,12 +2864,11 @@
   function recRasterize(){
     return new Promise(function(resolve,reject){
       var svgEl=document.getElementById("stage"); if(!svgEl) return reject(new Error("no svg"));
-      var xml=new XMLSerializer().serializeToString(svgEl);
-      var src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml);
+      var r=serializeStageForRaster();
+      var src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(r.xml);
       var img=new Image();
       img.onload=function(){
-        var scale=2, vb=(svgEl.getAttribute("viewBox")||"0 0 1000 760").split(" ").map(Number);
-        var W=vb[2]||1000, H=vb[3]||760;
+        var scale=2, W=r.W, H=r.H;
         var cv=document.createElement("canvas"); cv.width=W*scale; cv.height=H*scale;
         var ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
         ctx.drawImage(img,0,0,cv.width,cv.height);
@@ -2923,20 +3048,83 @@
     if(!rows.length) html+='<tr><td colspan="6" class="gl-empty" style="padding:16px;text-align:center;">（沒有符合條件的記錄）</td></tr>';
     html+='</tbody></table>';
     wrap.innerHTML=html;
-    var pv=document.getElementById("glPreview");
-    if(pv){
-      var cb=document.getElementById("glPreviewOn");
-      var on=cb? !!cb.checked : true;
-      if(on){
-        var svgEl=document.getElementById("stage");
-        if(svgEl){
-          var cl=svgEl.cloneNode(true);
-          cl.setAttribute("id","glPreviewSvg");
-          pv.innerHTML=""; pv.appendChild(cl); pv.style.display="";
-        }
-      } else { pv.innerHTML=""; pv.style.display="none"; }
+    renderGuestPreview(true);   // 圖面已更新：重新取樣並依原圖比例重算顯示尺寸
+  }
+
+  /* ---------- 嘉賓名單：排位預覽圖（原比例顯示／可調顯示大小） ---------- */
+  // 重點：複製圖面時必須清掉編輯區縮放留下的 inline width/height，否則預覽圖會被固定成
+  // 放大後的像素尺寸，再被 CSS 限高截斷而「變形」；尺寸一律由 viewBox 比例重新計算。
+  function cloneStageForPreview(){
+    var src=document.getElementById("stage"); if(!src) return null;
+    var cl=src.cloneNode(true);
+    cl.setAttribute("id","glPreviewSvg");
+    cl.removeAttribute("style");
+    cl.removeAttribute("width");
+    cl.removeAttribute("height");
+    cl.setAttribute("preserveAspectRatio","xMidYMid meet");
+    try{
+      var withId=cl.querySelectorAll("[id]");
+      for(var i=0;i<withId.length;i++) withId[i].removeAttribute("id");
+    }catch(_){}
+    return cl;
+  }
+  function gcdInt(a,b){ a=Math.round(a); b=Math.round(b); while(b){ var t=b; b=a%b; a=t; } return a||1; }
+  function previewScaleValue(){
+    var sel=document.getElementById("glPvScale");
+    return (sel && sel.value) ? sel.value : "auto";
+  }
+  // 依「原圖比例」計算顯示尺寸並寫入預覽 SVG（force=true 時重抓圖面）
+  function renderGuestPreview(force){
+    var pv=document.getElementById("glPreview"); if(!pv) return;
+    var info=document.getElementById("glPvInfo");
+    var cb=document.getElementById("glPreviewOn");
+    var on=cb? !!cb.checked : true;
+    if(!on){ pv.innerHTML=""; pv.style.display="none"; if(info) info.innerHTML=""; return; }
+    var svg=pv.firstElementChild;
+    if(force || !svg || svg.tagName.toLowerCase()!=="svg") {
+      svg=cloneStageForPreview();
+      if(!svg){ pv.innerHTML=""; return; }
+      pv.innerHTML=""; pv.appendChild(svg);
+    }
+    pv.style.display="";
+    var vb=parseVB(svg);
+    // 可用寬度：容器內容寬（clientWidth 含 padding，需扣掉）
+    var avail=pv.clientWidth;
+    try{
+      var cs=getComputedStyle(pv);
+      avail-= (parseFloat(cs.paddingLeft)||0) + (parseFloat(cs.paddingRight)||0);
+    }catch(_){}
+    if(!avail || avail<80){                       // 面板收合時量不到寬度：改用父層寬度，並於展開時重算
+      var host=pv.parentNode;
+      avail = host ? (host.clientWidth-24) : 860;
+    }
+    if(!avail || avail<80) avail=860;
+
+    var mode=previewScaleValue(), w, h;
+    if(mode==="auto"){
+      w=avail; h=w*vb.H/vb.W;
+      if(h>PV_MAXH){ h=PV_MAXH; w=h*vb.W/vb.H; }
+    } else {
+      var pct=parseFloat(mode);
+      if(!(pct>0)) pct=100;
+      w=avail*(pct/100); h=w*vb.H/vb.W;
+    }
+    w=Math.round(w); h=Math.round(h);
+    svg.setAttribute("width", w); svg.setAttribute("height", h);
+    svg.style.width=w+"px";       svg.style.height=h+"px";
+    svg.setAttribute("viewBox","0 0 "+vb.W+" "+vb.H);
+
+    if(info){
+      var g=gcdInt(vb.W, vb.H);
+      var pctShown=Math.round(w/vb.W*1000)/10;
+      var warn=(Math.abs((w/h)-(vb.W/vb.H))>0.005) ? ' <span class="pv-bad">（比例異常，請按「重新整理預覽圖」）</span>' : '';
+      info.innerHTML='原圖尺寸 <b>'+vb.W+' × '+vb.H+'</b>（顯示比例 <b>'+(vb.W/g)+' : '+(vb.H/g)+'</b>）'
+        +'　·　目前顯示 <b>'+w+' × '+h+'</b> px（<b>'+pctShown+'%</b>）'
+        +'　·　模式：'+((mode==="auto")?"自動（限高 "+PV_MAXH+"px）":(mode+"%"))+warn;
     }
   }
+  window.renderGuestPreview=renderGuestPreview;
+  window.refreshGuestPreview=function(){ renderGuestPreview(true); };
   function guestNamedRows(){
     return guestRows().filter(function(r){ return !!String(r.name||"").trim(); });
   }
@@ -3054,7 +3242,24 @@
     var el=document.getElementById(id);
     if(el){ var h=function(){ updateGuestList(); }; el.onchange=h; el.oninput=h; }
   });
-  (function(){ var cb=document.getElementById("glPreviewOn"); if(cb) cb.onchange=function(){ updateGuestList(); }; })();
+  (function(){ var cb=document.getElementById("glPreviewOn"); if(cb) cb.onchange=function(){ renderGuestPreview(); }; })();
+  // 預覽圖顯示大小／比例：記住使用者選擇，並在縮放、視窗尺寸改變、面板展開時重新計算顯示尺寸
+  (function(){
+    var sel=document.getElementById("glPvScale");
+    if(sel){
+      try{ var sv=localStorage.getItem(PV_KEY); if(sv) sel.value=sv; }catch(_){}
+      sel.onchange=function(){
+        try{ localStorage.setItem(PV_KEY, this.value); }catch(_){}
+        renderGuestPreview();
+      };
+    }
+    var gp=document.getElementById("guestPanel");
+    if(gp) gp.addEventListener("toggle", function(){ if(gp.open) renderGuestPreview(); });
+    var t=null;
+    window.addEventListener("resize", function(){ clearTimeout(t); t=setTimeout(function(){ renderGuestPreview(); }, 160); });
+    // 圖面縮放後預覽圖尺寸不受影響，但仍重算一次以同步資訊列
+    window.addEventListener("load", function(){ renderGuestPreview(); });
+  })();
   (function(){ var sel=document.getElementById("glNumStyle"); if(sel){ sel.value=state.numStyle||"arabic"; sel.onchange=function(){ state.numStyle=this.value; save(); render(); updateGuestList(); }; } })();
   function bindStaffConfig(){
     function g(id){ return document.getElementById(id); }
@@ -3077,11 +3282,73 @@
   }
   bindStaffConfig();
   updateGuestList();
-  // 版本標記：若頂部未顯示「標籤讓位」，表示瀏覽器仍在讀舊快取，需強制重新整理
+  // 版本標記：APP_VER 讀自 <meta name="app-version">（單一來源）。上傳新版時只需改該 meta 與 sw.js 版本號
+  var appMeta=document.querySelector('meta[name="app-version"]');
+  var APP_VER=appMeta? appMeta.getAttribute("content") : "unknown";
   var bt=document.getElementById("buildTag");
-  if(bt){ bt.textContent="2026-09-05.1（行動版優化）"; }
+  if(bt){ bt.textContent=APP_VER+"（預覽圖比例修復＋PWA＋同步檔＋自動更新提示）"; }
   var bn=document.getElementById("buildNote");
-  if(bn){ bn.textContent="　·　新增：圖面雙指捏合／按鈕縮放與平移、觸控拖曳圓桌與設施、iOS 輸入不跳縮放、可「加入主畫面」離線使用；並修復觸控拖曳被瀏覽器誤判為捲動而失效的問題。若此行未出現，請按 Ctrl/Cmd+Shift+R 強制重新整理。"; }
+  if(bn){ bn.textContent="　·　新增：iPhone／iPad 主畫面圖示與離線使用、跨裝置「打包全部（同步檔）」一鍵搬資料、有新版本時自動提示更新；修復嘉賓名單預覽圖變形。上傳新版後，所有在線裝置回到畫面（或每 30 分鐘）會自動偵測並提示「立即更新」。"; }
+
+  /* ---------- 有新版本自動提示（所有在線裝置回到畫面即檢查） ---------- */
+  function showUpdateBar(ver){
+    if(document.getElementById("updBar")) return;
+    var bar=document.createElement("div");
+    bar.id="updBar"; bar.className="upd-bar";
+    bar.innerHTML='<span>發現新版本'+(ver? "（"+ver+"）":"")+'，目前畫面仍是舊版</span>'
+      +'<button type="button" onclick="applyAppUpdate()">立即更新</button>'
+      +'<button type="button" class="ghost" onclick="this.parentNode.remove()">稍後</button>';
+    document.body.appendChild(bar);
+  }
+  window.applyAppUpdate=function(){
+    var bar=document.getElementById("updBar");
+    if(bar) bar.innerHTML='<span>更新中…</span>';
+    // 若有新版 Service Worker 已下載，請它立即交接
+    try{ if(navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.controller.postMessage({type:"SKIP_WAITING"}); }catch(_){}
+    // 清掉舊快取（只在連線時清，避免離線時把快取清光），確保拿到最新檔
+    var done=function(){ setTimeout(function(){ location.reload(true); }, 220); };
+    if(navigator.onLine && window.caches){
+      caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })
+        .then(done).catch(done);
+    } else done();
+  };
+  // 抓一次頁面 HTML（加 __vchk 繞過 Service Worker 快取），比對 <meta name="app-version"> 的版本號
+  function checkAppUpdate(){
+    if(!navigator.onLine) return;
+    var base=location.href.split("#")[0];
+    var url=base + (base.indexOf("?")>-1 ? "&" : "?") + "__vchk=" + Date.now();
+    fetch(url, {cache:"no-store", credentials:"same-origin"})
+      .then(function(r){ return r.ok ? r.text() : ""; })
+      .then(function(html){
+        var m=html.match(/<meta\s+name="app-version"\s+content="([^"]+)"/i);
+        if(m && m[1] && m[1]!==APP_VER) showUpdateBar(m[1]);
+      }).catch(function(){});
+  }
+  // 觸發時機：載入 3 秒後、回到前景（切回分頁／喚醒 iPad／開啟主畫面 App）、每 30 分鐘
+  setTimeout(checkAppUpdate, 3000);
+  document.addEventListener("visibilitychange", function(){ if(document.visibilityState==="visible") checkAppUpdate(); });
+  window.addEventListener("pageshow", function(e){ if(e.persisted) checkAppUpdate(); });
+  setInterval(checkAppUpdate, 30*60*1000);
+
+  // 離線使用（PWA）：註冊 Service Worker（檔案需與本頁同一資料夾一起上載）
+  if("serviceWorker" in navigator && (location.protocol==="https:" || location.hostname==="localhost" || location.hostname==="127.0.0.1")){
+    window.addEventListener("load", function(){
+      // updateViaCache:"none" → 每次都向網路要 sw.js，才抓得到新版
+      navigator.serviceWorker.register("sw.js", {updateViaCache:"none"}).then(function(reg){
+        // Service Worker 有更新（例如改了 sw.js 版本號）→ 直接提示
+        reg.addEventListener("updatefound", function(){
+          var nw=reg.installing;
+          if(!nw) return;
+          nw.addEventListener("statechange", function(){
+            if(nw.state==="installed" && navigator.serviceWorker.controller) showUpdateBar();
+          });
+        });
+        document.addEventListener("visibilitychange", function(){
+          if(document.visibilityState==="visible"){ try{ reg.update(); }catch(_){} }
+        });
+      }).catch(function(){ /* 註冊失敗不影響正常使用 */ });
+    });
+  }
 })();
 </script>
 </body>
