@@ -1,0 +1,3086 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="座位編輯">
+<meta name="theme-color" content="#1d4ed8">
+<title>座位圖編輯器（通用場地）</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1f2937; --muted:#6b7280;
+    --line:#e5e7eb; --brand:#1d4ed8; --brand-soft:#dbeafe;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Microsoft YaHei","PingFang TC","Heiti TC",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:16px 14px calc(24px + env(safe-area-inset-bottom));}
+  header h1{font-size:20px; margin:0 0 2px;}
+  header p{margin:0; color:var(--muted); font-size:13px;}
+  .toolbar{
+    display:flex; flex-wrap:wrap; gap:10px; margin:14px 0;
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px;
+  }
+  .grp{display:flex; flex-direction:column; gap:6px;}
+  .grp .lbl{font-size:11px; color:var(--muted); letter-spacing:.04em;}
+  .row{display:flex; flex-wrap:wrap; gap:6px;}
+  button{
+    font-family:inherit; font-size:14px; cursor:pointer;
+    border:1px solid var(--line); background:#fff; color:var(--ink);
+    border-radius:10px; padding:0 12px; min-height:44px;
+    display:inline-flex; align-items:center; gap:6px; transition:.15s;
+  }
+  button:hover{border-color:#c7cdd6;}
+  button:active{transform:translateY(1px);}
+  button.active{background:var(--brand); border-color:var(--brand); color:#fff;}
+  button.ghost{background:#fafbff;}
+  button.primary{background:var(--brand); border-color:var(--brand); color:#fff;}
+  .svgbox{
+    position:relative;
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:10px; overflow:auto; -webkit-overflow-scrolling:touch;
+  }
+  svg#stage{width:100%; height:auto; display:block; touch-action:manipulation;}
+  /* 觸控拖曳：禁止瀏覽器將圓桌／會議桌／設施的拖動手勢轉為捲動或縮放 */
+  [data-table],[data-mtable],[data-ofac]{touch-action:none;}
+  /* 移除 iOS 點擊時的灰色高亮方塊 */
+  button,summary,select,input,textarea,label{-webkit-tap-highlight-color:transparent;}
+  /* 圖面縮放控制（手機／平板觸控與桌面皆可用） */
+  .zoom-ctl{position:absolute; top:8px; right:8px; z-index:25; display:flex; flex-direction:column; gap:6px;}
+  .zoom-ctl button{width:42px; height:42px; min-height:42px; padding:0; justify-content:center; font-size:20px; line-height:1; border-radius:10px; background:rgba(255,255,255,.94); box-shadow:0 2px 8px rgba(15,23,42,.18);}
+  .zoom-ctl .zlabel{font-size:11px; text-align:center; background:rgba(31,41,55,.85); color:#fff; border-radius:8px; padding:2px 0; min-height:0; box-shadow:0 2px 8px rgba(15,23,42,.18);}
+  .hint{margin:12px 2px 0; font-size:12.5px; color:var(--muted);}
+  .hint b{color:var(--ink); font-weight:600;}
+
+  /* 場地設定面板 */
+  details.cfg{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:10px 12px; margin:14px 0;
+  }
+  details.cfg>summary{
+    cursor:pointer; font-weight:600; font-size:14px; padding:4px 0; list-style:none;
+  }
+  details.cfg>summary::-webkit-details-marker{display:none;}
+  details.cfg>summary::before{content:"▸ "; color:var(--brand);}
+  details.cfg[open]>summary::before{content:"▾ ";}
+  .cfg-grid{
+    display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px 14px; margin-top:10px;
+  }
+  .cfg-grid label{display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--muted);}
+  .cfg-grid input[type=text], .cfg-grid input[type=number]{
+    font-family:inherit; font-size:14px; color:var(--ink);
+    border:1px solid var(--line); border-radius:9px; padding:8px 10px; min-height:40px; background:#fff;
+  }
+  .cfg-grid label.chk{flex-direction:row; align-items:center; gap:8px; color:var(--ink); font-size:13px;}
+  .scn{margin-top:14px; border-top:1px dashed var(--line); padding-top:12px;}
+  .scn-bar{display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:13px;}
+  .scn-bar select, .scn-bar input[type=text]{
+    font-family:inherit; font-size:13px; border:1px solid var(--line); border-radius:9px; padding:7px 9px; min-height:38px;
+  }
+  .scn-bar select{min-width:120px;}
+  .scn-bar input[type=text]{width:130px;}
+  .stage-list{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0;}
+  .sl-item{display:flex; align-items:center; gap:6px; background:#f9fafb; border:1px solid var(--line); border-radius:10px; padding:5px 6px;}
+  .sl-item span{font-size:12px; color:var(--muted); white-space:nowrap;}
+  .sl-item input{width:130px; font-family:inherit; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:6px 8px;}
+  .sl-del{padding:0 10px; min-height:34px;}
+
+  /* 浮動選單 */
+  .pop{
+    position:absolute; display:none; z-index:30;
+    background:#fff; border:1px solid var(--line); border-radius:12px;
+    box-shadow:0 8px 28px rgba(15,23,42,.18); padding:12px; width:236px; max-width:90vw;
+  }
+  .pop{user-select:text; -webkit-user-select:text;}
+  .pop .pin{user-select:text; -webkit-user-select:text;}
+  .pop .ph{font-weight:700; font-size:14px; margin-bottom:8px;}
+  .pop .pstatus{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;}
+  .pop .pstatus button{
+    font-size:13px; padding:0 12px; min-height:38px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink);
+  }
+  .pop .pl{display:block; font-size:12px; color:var(--muted); margin-bottom:4px;}
+  .pop .pin{
+    width:100%; font-family:inherit; font-size:14px; border:1px solid var(--line); border-radius:9px; padding:8px 10px; min-height:40px;
+  }
+  .pop .pfoot{display:flex; gap:8px; margin-top:10px;}
+  .pop .pfoot button{flex:1; justify-content:center;}
+
+  @media (max-width:768px){
+    header h1{font-size:18px;}
+    .toolbar, details.cfg{padding:10px; gap:8px;}
+    button{font-size:13px; flex:1 1 auto; justify-content:center;}
+    .grp{flex:1 1 100%;}
+    .cfg-grid{grid-template-columns:1fr;}
+    /* 手機：輸入/下拉/文字區字號 ≥16px，避免 iOS Safari 焦點時自動放大縮放 */
+    .cfg-grid input[type=text], .cfg-grid input[type=number],
+    .cfg-grid textarea,
+    .pop .pin, .pop select, .scn-bar input[type=text], .scn-bar select,
+    .sl-item input, .gl-ctl input[type=text], .gl-ctl select{
+      font-size:16px !important; min-height:44px;
+    }
+    .preview-bar{bottom:calc(18px + env(safe-area-inset-bottom));}
+  }
+
+  /* 座位圖記錄庫 */
+  .rec-card{border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin:8px 0; background:#fff;}
+  .rec-head b{font-size:15px;}
+  .rec-meta{font-size:12px; color:var(--muted); margin:4px 0 8px; line-height:1.45;}
+  .rec-acts{display:flex; gap:6px; flex-wrap:wrap;}
+  .rec-acts button{font-size:13px; padding:6px 10px; min-height:34px;}
+  .rec-acts .danger{color:#ef4444; border-color:#fca5a5;}
+  .preview-bar{position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:60; display:flex; gap:10px; align-items:center; background:#1f2937; color:#fff; padding:10px 14px; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,.28); font-size:13px; max-width:92vw; flex-wrap:wrap;}
+  .preview-bar .pv-tag{font-weight:700;}
+  .preview-bar .pv-hint{color:#cbd5e1; font-size:12px;}
+  .preview-bar button{font-size:13px; padding:6px 12px; min-height:34px;}
+
+  /* 嘉賓名單（排位清單） */
+  .gl-stats{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 12px;}
+  .gl-stat{background:#f1f5f9; border:1px solid #e2e8f0; border-radius:10px; padding:8px 14px; min-width:104px;}
+  .gl-stat b{display:block; font-size:22px; color:#1d4ed8; line-height:1.15;}
+  .gl-stat span{font-size:12px; color:var(--muted);}
+  .gl-preview{border:1px solid var(--line); border-radius:12px; background:#fff; padding:8px; margin-bottom:12px; overflow:auto;}
+  .gl-preview svg{width:100%; height:auto; display:block; max-height:480px;}
+  .gl-table-wrap{max-height:540px; overflow:auto; border:1px solid var(--line); border-radius:12px; background:#fff;}
+  table.gl{width:100%; border-collapse:collapse; font-size:14px;}
+  table.gl th{background:#1d4ed8; color:#fff; font-weight:600; padding:9px 10px; text-align:left; white-space:nowrap; position:sticky; top:0; z-index:1;}
+  table.gl td{padding:7px 10px; border-bottom:1px solid #e5e7eb; vertical-align:top;}
+  table.gl tbody tr:nth-child(even) td{background:#f8fafc;}
+  table.gl tr.gl-grp td{background:#eef2ff !important; font-weight:700; color:#1e3a8a;}
+  table.gl td.gl-empty{color:#9ca3af;}
+  table.gl td.gl-name{font-weight:700; color:#0f172a;}
+  table.gl td.gl-seat{white-space:nowrap; color:#475569;}
+  .gl-ctl input[type="text"]{flex:1 1 200px; min-width:160px; font-family:inherit; font-size:13px; padding:0 10px; min-height:36px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink);}
+  .gl-ctl select{font-size:13px; padding:0 10px; min-height:36px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink);}
+
+  @media print{
+    header, .toolbar, .no-print{display:none !important;}
+    .wrap > *{display:none !important;}
+    .wrap > #guestPanel{display:block !important; border:none; box-shadow:none; padding:0;}
+    .wrap > #guestPanel > summary{display:none;}
+    .gl-table-wrap{max-height:none !important; overflow:visible !important; border:none;}
+    .gl-preview{break-inside:avoid; max-height:none;}
+    .gl-preview svg{max-height:none;}
+    body, .wrap{background:#fff;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>座位圖編輯器 · 通用場地範本</h1>
+    <p>適用於各類座談會、發佈會、交流會、宴請活動；可自訂排數／列數／通道／主講台場景／停車區，並提供「座談會（行列座位）」與「宴請（圓桌）」兩種編排模式，逐座設定狀態與姓名，匯出 SVG／PNG／JSON／CSV。</p>
+    <p style="font-size:12px;color:#6b7280;margin-top:6px;">程式版本：<b id="buildTag" style="color:#1d4ed8;">載入中…</b><span id="buildNote"></span></p>
+  </header>
+
+  <div class="toolbar">
+    <div class="grp">
+      <span class="lbl">主講台場景</span>
+      <div class="row">
+        <button id="btnScenario" class="ghost" onclick="switchScenarioUI()" style="min-width:110px;color:#000000;">場景：預設</button>
+      </div>
+    </div>
+    <div class="grp">
+      <span class="lbl">設施</span>
+      <div class="row">
+        <button id="btnPark" class="ghost" onclick="togglePark()">停車區：開</button>
+      </div>
+    </div>
+    <div class="grp">
+      <span class="lbl">匯出 / 匯入 / 重置</span>
+      <div class="row">
+        <button class="ghost" onclick="exportSVG()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>匯出 SVG</button>
+        <button class="ghost" onclick="exportPNG()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-7 7"/></svg>匯出 PNG</button>
+        <button class="ghost" onclick="exportJSON()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>匯出 JSON</button>
+        <button class="ghost" onclick="exportCSV()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/><path d="M9 9v11"/></svg>匯出 CSV</button>
+        <button class="ghost" onclick="document.getElementById('fileInput').click()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="M7 13l5-5 5 5"/><path d="M5 3h14"/></svg>匯入 JSON</button>
+        <button class="ghost" onclick="resetAll()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>重置範本</button>
+        <input id="fileInput" type="file" accept="application/json,.json" style="display:none" onchange="importJSON(event)">
+      </div>
+    </div>
+  </div>
+
+  <details class="cfg" open>
+    <summary>場地設定（適用於各類接待／活動場合）</summary>
+    <div class="row" style="margin:4px 0 12px;align-items:center;gap:10px;">
+      <span class="lbl">編排模式</span>
+      <select id="cfgMode">
+        <option value="grid">座談會（行列座位）</option>
+        <option value="banquet">宴請（圓桌）</option>
+        <option value="meeting">會議（長方桌）</option>
+        <option value="outdoor">戶外發佈（現場發佈場景）</option>
+      </select>
+      <span class="hint" style="margin:0;">切換後左側設定會對應切換。</span>
+    </div>
+    <div id="titleControls" class="cfg-grid">
+      <label>活動名稱（圖上標題）<input id="cfgActivity" type="text" placeholder="如：三五規劃交流會"></label>
+      <label>場地名稱（圖上標題）<input id="cfgVenue" type="text" placeholder="如：中葡綜合體多功能廳"></label>
+      <label class="chk"><input id="cfgShowTitle" type="checkbox"> 顯示圖上標題</label>
+    </div>
+    <div id="gridControls">
+    <div class="cfg-grid">
+      <label>排數（最多 26）<input id="cfgRows" type="number" min="1" max="26"></label>
+      <label>每行座位數（最多 30）<input id="cfgCols" type="number" min="1" max="30"></label>
+      <label>通道位置（第幾列之後，0=無通道）<input id="cfgAisle" type="number" min="0" max="30"></label>
+      <label>前幾排設通道（0=僅按列通道）<input id="cfgAisleRows" type="number" min="0" max="26"></label>
+      <label class="chk"><input id="cfgScreen" type="checkbox"> 顯示投影屏幕</label>
+      <label class="chk"><input id="cfgStage" type="checkbox"> 顯示主講台</label>
+      <label class="chk"><input id="cfgPark" type="checkbox"> 顯示停車區</label>
+      <label class="chk"><input id="cfgShowExits" type="checkbox"> 顯示出入口</label>
+      <label>停車區標籤<input id="cfgParkLabel" type="text"></label>
+      <label>停車區副標<input id="cfgParkSub" type="text"></label>
+    </div>
+    <div class="scn">
+      <div class="scn-bar">
+        <span>主講台場景：</span>
+        <select id="scenarioSel"></select>
+        <input id="scenarioName" type="text" placeholder="場景名稱">
+        <button id="addScenario" class="ghost">＋新增</button>
+        <button id="delScenario" class="ghost">刪除</button>
+      </div>
+      <div id="stageList" class="stage-list"></div>
+      <button id="addStagePos" class="ghost">＋新增主位</button>
+    </div>
+    <p class="hint">修改排數／列數會保留原有座位資料；其餘設定即時生效並自動儲存。所有設定與編輯內容存於本機瀏覽器，關閉不流失；可用「匯出 JSON」備份、他處「匯入 JSON」還原；「匯出 CSV」可取得完整座位名單（桌名／座位／姓名／狀態）供 Excel 整理。</p>
+    </div><!-- /gridControls -->
+  </details>
+
+  <details class="cfg" id="autoPanel">
+    <summary>名單自動排位（禮賓規則）</summary>
+    <p class="hint" style="margin-top:8px;">貼上「按尊次排列」的名單，系統依單主位／雙主位與以右／左為先的禮賓規則，由中央向兩側、前排到後排自動排位。雙主位會預留中央兩個座位為主位投影。</p>
+    <div class="cfg-grid" style="grid-template-columns:1fr;">
+      <label>名單（每行一位；亦可用 、或 ，分隔）
+        <textarea id="nameList" rows="5" style="font-family:inherit;font-size:14px;border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-height:44px;resize:vertical;"></textarea>
+      </label>
+    </div>
+    <div class="row" style="margin-top:10px;gap:18px;flex-wrap:wrap;">
+      <div class="grp"><span class="lbl">主位模式</span>
+        <div class="row">
+          <button id="modeSingle" class="active" type="button" onclick="setAutoMode('single')">單主位</button>
+          <button id="modeDual" type="button" onclick="setAutoMode('dual')">雙主位</button>
+        </div>
+      </div>
+      <div class="grp"><span class="lbl">優先方向</span>
+        <div class="row">
+          <button id="dirRight" class="active" type="button" onclick="setAutoDir('right')">以右為先（澳門）</button>
+          <button id="dirLeft" type="button" onclick="setAutoDir('left')">以左為先（內地）</button>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;align-items:center;gap:10px;flex-wrap:wrap;">
+      <label class="chk" style="font-size:13px;"><input id="autoEmptyOnly" type="checkbox" checked> 只填入空白座位（不覆蓋已有姓名）</label>
+      <div id="autoTableWrap" class="row" style="margin-top:8px;align-items:center;gap:10px;display:none;">
+        <span class="lbl">目標圓桌</span>
+        <select id="autoTable"></select>
+        <span class="hint" style="margin:0;">依「以右／左為先」由主位向兩側環狀扇出。</span>
+      </div>
+      <button class="primary" type="button" onclick="autoAssign()">自動排位</button>
+      <button class="ghost" type="button" onclick="clearAuto()">清除剛排的名單</button>
+    </div>
+    <div id="autoPreview" class="hint" style="margin-top:10px;background:#f9fafb;border:1px solid var(--line);border-radius:10px;padding:10px;min-height:20px;"></div>
+    <div id="autoResult" class="hint" style="margin-top:8px;color:var(--brand);font-weight:600;"></div>
+  </details>
+
+  <details class="cfg" id="exitPanel" open>
+    <summary>出入口設定（場地出入口位置）</summary>
+    <p class="hint" style="margin-top:8px;">設定場地的入口／出口位置，可拖動「沿邊位置」或點擊圖上標記編輯。每個出入口可選上／下／左／右四邊與該邊上的相對位置；入口為綠、出口為紅、出入口為藍。</p>
+    <div id="exitList" class="stage-list"></div>
+    <button id="addExit" class="ghost">＋新增出入口</button>
+  </details>
+
+  <details class="cfg" id="screenPanel" open>
+    <summary>投影屏幕設定（可編輯位置／多屏幕）</summary>
+    <p class="hint" style="margin-top:8px;">每個屏幕可設「方向」：上方橫向、左側直向、右側直向；並可設定名稱、X／Y 位置與長度。也可直接點擊圖上屏幕編輯。場地有多個屏幕時，按下方按鈕增加（例如場地兩側直立屏幕）。</p>
+    <div id="screenList" class="stage-list"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button id="addScreenTop" class="ghost">＋上方屏幕</button>
+      <button id="addScreenLeft" class="ghost">＋左側直向</button>
+      <button id="addScreenRight" class="ghost">＋右側直向</button>
+    </div>
+  </details>
+
+  <details class="cfg" id="tablePanel" style="display:none;">
+    <summary>圓桌設定（宴請模式）</summary>
+    <p class="hint" style="margin-top:8px;">新增／刪除圓桌，每桌 8–20 個座位；可標記「主桌」（司長所在）。在圖上直接拖曳圓桌本體可移動位置；點擊座位圈可填姓名／狀態。</p>
+    <div id="tableList" class="stage-list"></div>
+    <button id="addTable" class="ghost">＋新增圓桌</button>
+  </details>
+
+  <details class="cfg" id="meetingControls" style="display:none;">
+    <summary>會議桌設定（會議模式）</summary>
+    <p class="hint" style="margin-top:8px;">單張長方形會議桌，座位圍坐四周：上下兩長邊為一般席位，左右兩短邊為主位（金色標「主」）。可調整桌名、長／短邊座位數與桌型尺寸；在圖上直接拖曳桌面可移動整張會議桌。</p>
+    <div class="cfg-grid">
+      <label>桌名<input id="cfgMTable" type="text"></label>
+      <label>長邊每邊座位數（1–12）<input id="cfgMPL" type="number" min="1" max="12"></label>
+      <label>短邊每邊主位數（1–4）<input id="cfgMPS" type="number" min="1" max="4"></label>
+      <label>桌寬（長邊長度，200–900）<input id="cfgMW" type="number" min="200" max="900"></label>
+      <label>桌高（短邊長度，120–400）<input id="cfgMH" type="number" min="120" max="400"></label>
+    </div>
+  </details>
+
+  <details class="cfg" id="staffControls" style="display:none;">
+    <summary>工作人員座位區（座談會／會議模式）</summary>
+    <p class="hint" style="margin-top:8px;">於場地兩側或最後方安排工作人員（如接待、統籌、技術、記錄）座位區；座位可點擊填寫「姓名／部門／機構／職稱」，與與會者座位編輯方式一致，並會併入下方「嘉賓名單」。兩側為直向排列，後方為橫排區塊。</p>
+    <div class="cfg-grid">
+      <label class="chk" style="grid-column:1/-1;"><input id="cfgStaffOn" type="checkbox"> 啟用工作人員座位區</label>
+      <label>區域名稱<input id="cfgStaffLabel" type="text" placeholder="如：工作人員座位區"></label>
+      <label>位置<select id="cfgStaffPos">
+        <option value="both">兩側</option>
+        <option value="left">左側</option>
+        <option value="right">右側</option>
+        <option value="back">後方</option>
+      </select></label>
+      <label id="labStaffSide">每側座位數（1–20）<input id="cfgStaffSide" type="number" min="1" max="20"></label>
+      <label id="labStaffBR">後方排數（1–4）<input id="cfgStaffBackR" type="number" min="1" max="4"></label>
+      <label id="labStaffBC">後方位數（1–16）<input id="cfgStaffBackC" type="number" min="1" max="16"></label>
+    </div>
+  </details>
+
+  <details class="cfg" id="outdoorControls" style="display:none;">
+    <summary>戶外發佈設定（現場發佈場景）</summary>
+    <p class="hint" style="margin-top:8px;">適用於康公廟前地等戶外現場發佈會：預先排定「背景板 → 發佈台主位 → 攝影區 → 傳媒區 → 嘉賓區」的分區站位；設施/裝置改為自由定位，不佔用固定區塊。背景板、發佈台、傳媒區、嘉賓區均可個別以開關設為「有／沒有」；可於下方新增「設施/裝置」（投影屏幕、音響台、簽名台等），各設施可改名、選樣式、開關或刪除；<b>在圖上直接拖曳設施條即可移動位置</b>，點擊設施條（或側欄清單按「位置 X,Y」）可精確設 X/Y 座標、寬高與標籤字體大小。</p>
+    <div class="cfg-grid">
+      <label class="chk" style="grid-column:1/-1;"><input id="cfgOBackdropOn" type="checkbox" checked> 設背景板（有／沒有）</label>
+      <label>背景板文字<input id="cfgOBackdrop" type="text" placeholder="如：三五規劃宣傳發佈會"></label>
+      <label class="chk" style="grid-column:1/-1;"><input id="cfgOPodOn" type="checkbox" checked> 設發佈台（有／沒有）</label>
+      <label>發佈台名稱<input id="cfgOPodLabel" type="text" placeholder="如：發佈台"></label>
+      <label>發佈台主位數（1–9）<input id="cfgOPodCount" type="number" min="1" max="9"></label>
+      <label>攝影區名稱<input id="cfgOPhoto" type="text" placeholder="如：攝影區（記者拍攝位）"></label>
+      <label class="chk" style="grid-column:1/-1;"><input id="cfgOMediaOn" type="checkbox" checked> 設傳媒區（有／沒有）</label>
+      <label>傳媒區名稱<input id="cfgOMediaLabel" type="text" placeholder="如：傳媒區"></label>
+      <label>傳媒區排數（1–8）<input id="cfgOMediaRows" type="number" min="1" max="8"></label>
+      <label>傳媒區每行座位（1–16）<input id="cfgOMediaCols" type="number" min="1" max="16"></label>
+      <label class="chk" style="grid-column:1/-1;"><input id="cfgOGuestOn" type="checkbox" checked> 設嘉賓區（有／沒有）</label>
+      <label>嘉賓區名稱<input id="cfgOGuestLabel" type="text" placeholder="如：嘉賓區"></label>
+      <label>嘉賓區排數（1–8）<input id="cfgOGuestRows" type="number" min="1" max="8"></label>
+      <label>嘉賓區每行座位（1–16）<input id="cfgOGuestCols" type="number" min="1" max="16"></label>
+      <div style="grid-column:1/-1; margin-top:8px; padding-top:10px; border-top:1px dashed var(--line);">
+        <div class="row" style="align-items:center; gap:10px; margin-bottom:6px;">
+          <span class="lbl" style="font-weight:600;">設施/裝置</span>
+          <span class="hint" style="margin:0;">（投影屏幕、音響台、簽名台等現場裝置）</span>
+        </div>
+        <div id="outFacList" class="fac-list"></div>
+        <button id="btnAddFac" class="ghost" type="button" style="margin-top:6px;">＋ 新增設施/裝置</button>
+      </div>
+    </div>
+  </details>
+
+
+  <details class="cfg" id="recordsPanel">
+    <summary>座位圖記錄庫（參考用）</summary>
+    <p class="hint" style="margin-top:8px;">把排好的場地與座位安排「存為記錄」，日後類似活動可回看參考排位與場地設置，或一鍵套用為新場地底稿。記錄存於本機瀏覽器（與專案管理系統共用同一記錄庫）。</p>
+    <div class="cfg-grid" style="grid-template-columns:1fr 1fr;">
+      <label>記錄名稱<input id="recName" type="text" placeholder="如：9/7 經財範疇專場交流會"></label>
+      <label>活動日期<input id="recDate" type="date"></label>
+    </div>
+    <label style="display:block;margin:8px 0;">備註<input id="recNotes" type="text" placeholder="如：座位較緊、雙主位、兩側直向屏幕"></label>
+    <div class="row" style="margin-top:6px;gap:10px;flex-wrap:wrap;align-items:center;">
+      <button class="primary" type="button" onclick="saveRecord()">＋ 儲存為記錄</button>
+      <button class="ghost" type="button" onclick="exportAllRec()">整庫匯出 JSON</button>
+      <button class="ghost" type="button" onclick="document.getElementById('recFile').click()">整庫匯入 JSON</button>
+      <input id="recFile" type="file" accept="application/json,.json" style="display:none" onchange="importAllRec(event)">
+      <span id="recMsg" class="hint" style="margin:0;color:var(--brand);font-weight:600;"></span>
+    </div>
+    <div id="recList" style="margin-top:12px;"></div>
+  </details>
+
+  <div class="svgbox">
+    <svg id="stage" viewBox="0 0 1000 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="座位模擬圖"></svg>
+    <div id="pop" class="pop"></div>
+    <div id="zoomCtl" class="zoom-ctl no-print">
+      <button type="button" aria-label="放大" onclick="zoomIn()">＋</button>
+      <div class="zlabel" id="zoomPct">100%</div>
+      <button type="button" aria-label="縮小" onclick="zoomOut()">－</button>
+      <button type="button" aria-label="重置視圖" onclick="resetZoom()">⤢</button>
+    </div>
+  </div>
+
+  <details class="cfg" id="guestPanel" open>
+    <summary>嘉賓名單（排位清單 · 人數／姓名／部門／職稱一覽）</summary>
+    <p class="hint" style="margin-top:8px;">依目前座位圖的排位順序自動產生名單（含預覽圖）。在座位上按一下，填寫「姓名／部門／機構／職稱」，名單即時更新；可匯出 DOCX（含預覽圖）、CSV，或直接列印／存成 PDF。</p>
+    <div class="row gl-ctl no-print" style="margin:8px 0; gap:10px; flex-wrap:wrap; align-items:center;">
+      <span class="lbl">顯示</span>
+      <select id="glFilter">
+        <option value="named">僅有姓名者（正式名單）</option>
+        <option value="all">全部座位（含空缺）</option>
+        <option value="empty">僅空缺座位</option>
+      </select>
+      <span class="lbl">排序</span>
+      <select id="glSort">
+        <option value="seat">依排位順序</option>
+        <option value="zone">依區域分組</option>
+        <option value="name">依姓名排序</option>
+      </select>
+      <label class="chk"><input id="glPreviewOn" type="checkbox" checked> 顯示預覽圖</label>
+      <input id="glFind" type="text" placeholder="搜尋姓名／部門／職稱">
+      <span class="lbl">編號</span>
+      <select id="glNumStyle">
+        <option value="arabic">阿拉伯（1,2,3）</option>
+        <option value="chinese">中文（一,二,三）</option>
+      </select>
+    </div>
+    <div class="row no-print" style="margin:6px 0 12px; gap:10px; flex-wrap:wrap; align-items:center;">
+      <button class="primary" type="button" onclick="exportGuestDocx()">匯出 DOCX（含預覽圖）</button>
+      <button class="ghost" type="button" onclick="exportGuestCSV()">匯出 CSV</button>
+      <button class="ghost" type="button" onclick="printGuest()">列印／存成 PDF</button>
+      <span id="glMsg" class="hint" style="margin:0; color:var(--brand); font-weight:600;"></span>
+    </div>
+    <div id="glStats" class="gl-stats"></div>
+    <div id="glPreview" class="gl-preview"></div>
+    <div id="glTableWrap" class="gl-table-wrap"></div>
+  </details>
+
+  <p class="hint">
+    <b>操作：</b>單擊座位 → 彈出選單選擇狀態並填寫姓名；單擊主講台方格 → 編輯該主位人名；上方「場地設定」可調整排數、列數、通道、主講台場景與停車區，套用於任意接待／活動場合。
+  </p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = "wb_seatmap_state_v2";
+
+  var DEFAULT_CONFIG = {
+    activity: "三五規劃交流會",
+    venue: "中葡綜合體多功能廳",
+    showTitle: true,
+    rows: 7,
+    cols: 10,
+    aisleAfter: 5,
+    aisleRows: 0,
+    showScreen: true,
+    showStage: true,
+    screens: [{ id:"s1", label:"投影屏幕", x:370, y:58, w:260 }],
+    parking: { enabled: true, label: "C17 空地", sub: "嘉賓停車區域" },
+    showExits: true,
+    mode: "grid",
+    staff: { enabled:false, label:"工作人員座位區", pos:"both", sideCount:6, backRows:1, backCols:8 },
+    banquet: { tables: [] },
+    meeting: { table: { label:"會議主桌", x:500, y:430, w:520, h:200, perLong:6, perShort:1 } },
+    outdoor: {
+      backdrop: { label: "「三五」規劃宣傳發佈會", enabled: true },
+      facilities: [{ id:"f0", label:"投影屏幕", kind:"screen", enabled:true, x:120, y:124, w:760, h:42, fs:15 }],
+      podium: { label: "發佈台", count: 5, enabled: true },
+      photo: { label: "攝影區（記者拍攝位）" },
+      media: { label: "傳媒區", rows: 2, cols: 8, enabled: true },
+      guest: { label: "嘉賓區", rows: 3, cols: 8, enabled: true }
+    },
+    exits: [
+      {id:"e1", label:"正門入口", type:"entrance", edge:"bottom", pos:0.5},
+      {id:"e2", label:"側門出口", type:"exit", edge:"right", pos:0.5}
+    ],
+    statuses: [
+      {key:"empty",    label:"空位",   fill:"#e5e7eb", line:"#9ca3af"},
+      {key:"confirmed",label:"已確認", fill:"#3b82f6", line:"#1d4ed8"},
+      {key:"vip",      label:"VIP",    fill:"#f59e0b", line:"#d97706"},
+      {key:"reserved", label:"預留",   fill:"#10b981", line:"#047857"}
+    ]
+  };
+
+  function defaultState(){
+    var s = {
+      config: JSON.parse(JSON.stringify(DEFAULT_CONFIG)),
+      seats: {},
+      seatsBanquet: {},
+      seatsMeeting: {},
+      seatsPodium: {},
+      seatsMedia: {},
+      seatsGuest: {},
+      scenarios: {
+        "9月7日":  ["經科局局長","旅遊局代局長","吳惠嫻司長","招商局委員","金管局主席"],
+        "9月24日": ["相關局長1","相關局長2","黃少潭司長","吳惠嫻司長","相關局長3","相關局長4"]
+      },
+      activeScenario: "9月7日"
+    };
+    buildSeats(s);
+    // 示例資料（非真實安排）
+    ["A5","A6","B4","G7"].forEach(function(k){ if(s.seats[k]) s.seats[k].status="vip"; });
+    ["C1","C2","D5","D6","E3","E8","F2","F9"].forEach(function(k){ if(s.seats[k]) s.seats[k].status="confirmed"; });
+    if(s.seats["B9"]) s.seats["B9"].status="reserved";
+    return s;
+  }
+
+  function rowLabels(n){
+    var a=[]; for(var i=0;i<n;i++){ a.push(String.fromCharCode(65+i)); } return a;
+  }
+  function buildSeats(s){
+    var C=s.config, labels=rowLabels(C.rows), keep={};
+    for(var r=0;r<C.rows;r++){
+      for(var c=0;c<C.cols;c++){
+        var id=labels[r]+(c+1);
+        keep[id]= (s.seats && s.seats[id]) ? s.seats[id] : {status:"empty", name:""};
+      }
+    }
+    s.seats=keep;
+  }
+  function rebuildSeats(s){ buildSeats(s); }
+
+  var state = load() || defaultState();
+  // 相容舊版：確保必要欄位存在
+  if(!state.config) state.config=JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  if(!state.scenarios) state.scenarios={ "場景一":[""] };
+  if(!state.activeScenario || !state.scenarios[state.activeScenario]) state.activeScenario=Object.keys(state.scenarios)[0];
+  if(typeof state.config.showExits==="undefined") state.config.showExits=true;
+  if(!state.config.exits) state.config.exits=[];
+  if(!state.config.mode) state.config.mode="grid";
+  if(!state.config.banquet) state.config.banquet={tables:[]};
+  if(!state.seatsBanquet) state.seatsBanquet={};
+  if(!state.config.meeting) state.config.meeting={table:{label:"會議主桌",x:500,y:430,w:520,h:200,perLong:6,perShort:1}};
+  if(!state.seatsMeeting) state.seatsMeeting={};
+  if(!state.config.outdoor) state.config.outdoor={ backdrop:{label:"",enabled:true}, podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8,enabled:true}, guest:{label:"嘉賓區",rows:3,cols:8,enabled:true} };
+  if(typeof state.config.showTitle==="undefined") state.config.showTitle=true;
+  if(!state.seatsPodium) state.seatsPodium={};
+  if(!state.seatsMedia) state.seatsMedia={};
+  if(!state.seatsGuest) state.seatsGuest={};
+  if(!state.seatsStaff) state.seatsStaff={};   // 工作人員座位區（grid→gS_ / meeting→mM_）
+  if(!state.stageInfo) state.stageInfo={};   // 主講台主位的部門／職稱：key = 場景名+"|"+序號
+  if(!state.numStyle) state.numStyle="arabic";   // 嘉賓名單／圓桌座位編號：arabic=阿拉伯數字 / chinese=中文數字
+  rebuildSeats(state);
+
+  var VIEW_H = 760;
+
+  function load(){
+    try{ var raw=localStorage.getItem(KEY); return raw? JSON.parse(raw): null; }catch(e){ return null; }
+  }
+  var saveT;
+  function save(){
+    if(inPreview) return;
+    clearTimeout(saveT);
+    saveT=setTimeout(function(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }, 200);
+  }
+  function esc(s){
+    return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+  function clamp(v,lo,hi){ v=parseInt(v,10); if(isNaN(v)) v=lo; return Math.max(lo, Math.min(hi, v)); }
+  // 依方框寬度把人名拆成多行（最多 3 行，超出加省略號）
+  function wrapText(str, maxChars){
+    str=String(str==null?"":str);
+    if(!str) return [""];
+    var out=[];
+    for(var i=0;i<str.length;i+=maxChars){ out.push(str.slice(i,i+maxChars)); }
+    if(out.length>3) out=out.slice(0,3);
+    return out;
+  }
+  // 估算文字寬度：中日韓全形字約 1 字身，英數約 0.55 字身
+  function textW(s, size){
+    var w=0;
+    for(var i=0;i<s.length;i++){ w += (s.charCodeAt(i)>0x2e80)? size : size*0.55; }
+    return w;
+  }
+  // 主位名稱「單行顯示」：自動縮字至最小字級；仍過寬則以 textLength 壓縮，絕不分行
+  function fitOneLine(s, avail, size, minSize){
+    s=String(s==null?"":s);
+    if(!s) return {size:size, squeeze:false};
+    var f=size;
+    while(f>minSize && textW(s,f)>avail){ f-=0.25; }
+    return { size:f, squeeze: textW(s,f)>avail };
+  }
+
+  // 中央主位索引
+  function centerIdx(N){
+    if(N%2===1) return [Math.floor(N/2)];
+    return [N/2-1, N/2];
+  }
+
+  // 佈局（自適應：座位過多時自動縮小間距與半徑，確保不超出畫布）
+  var SEAT_TOP=264, TOP_EXIT_Y=210, PITCH_Y=64, SEAT_R=23, SX=72, AISLE_GAP=100;
+  function layout(){
+    var C=state.config;
+    var leftCount=C.aisleAfter, rightCount=C.cols-leftCount;
+    var gap=(leftCount>0 && rightCount>0)? AISLE_GAP : 0;
+    // 側牆預留：由外而內＝[出入口標籤(最外圍)] → 間距 → [投影屏幕] → 間距 → 座位區。
+    // 出入口標籤永遠貼最外圍（牆邊），同側有屏幕時屏幕內移，互不重疊。
+    var scr=C.screens||[];
+    var hasLeftScreen=scr.some(function(s){ return (s.dir||"top")==="left"; });
+    var hasRightScreen=scr.some(function(s){ return (s.dir||"top")==="right"; });
+    var exL=C.exits||[];
+    var hasLeftExit=exL.some(function(e){ return e.edge==="left"; });
+    var hasRightExit=exL.some(function(e){ return e.edge==="right"; });
+    var EPAD=6, EXITW=102, SCRW=42, GAP=8;
+    function reserve(hasExit,hasScreen){
+      if(hasExit && hasScreen) return EPAD+EXITW+GAP+SCRW+GAP;
+      if(hasExit) return EPAD+EXITW+GAP;
+      if(hasScreen) return 18+SCRW+GAP;
+      return 40;
+    }
+    var mL=reserve(hasLeftExit,hasLeftScreen), mR=reserve(hasRightExit,hasRightScreen);
+    var leftScreenX = hasLeftExit ? (EPAD+EXITW+GAP) : 18;
+    var rightScreenX = hasRightExit ? (1000-EPAD-EXITW-GAP-SCRW) : 940;
+    var usableW=1000-mL-mR;
+    var effSX=Math.min(SX, (usableW-gap)/C.cols);
+    if(effSX<20) effSX=20;
+    var leftW=leftCount*effSX, rightW=rightCount*effSX;
+    var splitW=leftW+rightW+gap;
+    var startX=mL + (usableW-splitW)/2 + effSX/2;           // 設通道（前段）起始 x
+    var startXc=mL + (usableW - C.cols*effSX)/2 + effSX/2;   // 無通道（後段）居中起始 x
+    var r=Math.max(8, Math.min(SEAT_R, effSX*0.42));
+    // aisleRows：0 或 >=rows 代表全部排都設通道；否則僅前 aisleRows 排設通道，其後排合併為連續區塊
+    function seatX(s, rw){
+      var limit=C.aisleRows||0;
+      var hasAisle = gap>0 && (limit===0 || rw<limit);
+      if(hasAisle){
+        if(s<leftCount) return startX + s*effSX;
+        return startX + leftW + gap + (s-leftCount)*effSX;
+      }
+      return startXc + s*effSX;
+    }
+    function seatY(rw){ return SEAT_TOP + rw*PITCH_Y; }
+    return {leftCount:leftCount, rightCount:rightCount, leftW:leftW, rightW:rightW, gap:gap, startX:startX, startXc:startXc, r:r, effSX:effSX, seatX:seatX, seatY:seatY, EPAD:EPAD, EXITW:EXITW, leftScreenX:leftScreenX, rightScreenX:rightScreenX};
+  }
+  function aisleX(L){
+    if(L.leftCount<=0 || L.rightCount<=0) return null;
+    var leftEnd = L.startX + (L.leftCount-1)*L.effSX + L.r;
+    var rightStart = L.startX + L.leftW + L.gap;
+    return (leftEnd + rightStart)/2;
+  }
+
+  function render(){
+    var svg=document.getElementById("stage");
+    var C=state.config;
+    var mode=(C.mode==="banquet")?"banquet":(C.mode==="meeting"?"meeting":(C.mode==="outdoor"?"outdoor":"grid"));
+    // 頭部裝飾底部（投影屏幕＋主講台），供「與會者座位」標籤與座位區靈活讓位，避免被覆蓋
+    var decorBottom=56;
+    if(C.showScreen && C.screens && C.screens.length){
+      C.screens.forEach(function(s){ if((s.dir||"top")==="top" && (s.y||58)<260){ var b=(s.y||58)+38; if(b>decorBottom) decorBottom=b; } });
+    }
+    if(C.showStage){ var sb=112+86; if(sb>decorBottom) decorBottom=sb; }
+    // 若有「上方」出入口，在主台下方預留一條標籤帶，避免「正門入口」標籤蓋到主台嘉賓姓名
+    var hasTopExit=(C.exits||[]).some(function(e){ return e.edge==="top"; });
+    TOP_EXIT_Y=hasTopExit? 34 : 72;   // 頂部出入口標籤中心：有頂門時置於整張圖最上方（主台之上）；否則維持舊位置
+    SEAT_TOP=Math.max(decorBottom+76, 264);
+    var parts=[];
+    parts.push('<style>text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Microsoft YaHei","PingFang TC",sans-serif;}</style>');
+
+    // 標題（可於側欄「顯示圖上標題」關閉；活動名稱／場地名稱可直接修改）
+    if(C.showTitle!==false){
+      parts.push('<text x="500" y="20" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2937">'+esc(C.activity||"座位模擬圖")+'</text>');
+      var subBits=[]; if(C.venue) subBits.push(C.venue); subBits.push(mode==="banquet"?"宴請圓桌圖":(mode==="meeting"?"會議長桌圖":(mode==="outdoor"?"戶外發佈場景圖":"座位模擬圖")));
+      parts.push('<text x="500" y="42" text-anchor="middle" font-size="13" fill="#6b7280">'+esc(subBits.join(" · "))+'</text>');
+    }
+
+    // 投影屏幕（支援 上方橫向 / 左側直向 / 右側直向）；戶外發佈模式改用背景板，不繪製通用屏幕
+    if(C.showScreen && mode!=="outdoor"){
+      if(!C.screens) C.screens=[{id:"s1",label:"投影屏幕",x:370,y:58,w:260}];
+      C.screens.forEach(function(s){
+        var dir=s.dir||"top", sy=s.y, sw=s.w, bw, bh;
+        var sx=(dir==="left")? 18 : (dir==="right"? 940 : s.x);
+        if(dir==="left"||dir==="right"){
+          var exOnSide=(C.exits||[]).some(function(e){ return e.edge===dir; });
+          if(exOnSide){ sx = (dir==="left")? (6+102+8) : (1000-6-102-8-42); }
+        }
+        if(dir==="left"||dir==="right"){ bw=42; bh=sw; } else { bw=sw; bh=38; }
+        parts.push('<rect class="screen" data-screen="'+esc(s.id)+'" x="'+sx+'" y="'+sy+'" width="'+bw+'" height="'+bh+'" rx="6" fill="#1f2937" style="cursor:pointer"/>');
+        if(dir==="left"||dir==="right"){
+          var cx=sx+42/2, cy=sy+sw/2, rot=(dir==="left")?-90:90;
+          parts.push('<text transform="rotate('+rot+' '+cx+' '+cy+')" x="'+cx+'" y="'+cy+'" text-anchor="middle" font-size="15" fill="#ffffff">'+esc(s.label||"投影屏幕")+'</text>');
+        } else {
+          parts.push('<text x="'+(sx+sw/2)+'" y="'+(sy+25)+'" text-anchor="middle" font-size="17" fill="#ffffff">'+esc(s.label||"投影屏幕")+'</text>');
+        }
+      });
+    }
+
+    var area, parkY;
+    if(mode==="banquet"){
+      var rb=drawBanquet(parts, C); area=rb.area; parkY=rb.parkY;
+    } else if(mode==="meeting"){
+      var rm=drawMeeting(parts, C); area=rm.area; parkY=rm.parkY;
+    } else if(mode==="outdoor"){
+      var ro=drawOutdoor(parts, C); area=ro.area; parkY=ro.parkY;
+    } else {
+      var rg=drawGrid(parts, C); area=rg.area; parkY=rg.parkY;
+    }
+
+    // 出入口（場地出入口位置）
+    if(C.showExits && (C.exits||[]).length){
+      parts.push('<g id="exitsLayer">'+renderExitsInner(null, area.left, area.right, area.top, area.bottom)+'</g>');
+    }
+
+    // 停車區（左下角，不畫指向箭頭；宴請／會議／戶外發佈模式不顯示）
+    if(C.parking && C.parking.enabled && mode!=="banquet" && mode!=="meeting" && mode!=="outdoor"){
+      parts.push('<rect x="40" y="'+parkY+'" width="250" height="58" rx="8" fill="#fde68a" stroke="#d97706" stroke-width="2" stroke-dasharray="6 4"/>');
+      parts.push('<text x="165" y="'+(parkY+24)+'" text-anchor="middle" font-size="15" font-weight="600" fill="#92400e">'+esc(C.parking.label||"停車區")+'</text>');
+      parts.push('<text x="165" y="'+(parkY+44)+'" text-anchor="middle" font-size="13" fill="#92400e">'+esc(C.parking.sub||"")+'</text>');
+    }
+
+    // 圖例
+    var lx=720, ly=parkY, items=C.statuses;
+    var boxH=36+items.length*20;
+    parts.push('<rect x="'+lx+'" y="'+ly+'" width="248" height="'+boxH+'" rx="8" fill="#f9fafb" stroke="#e5e7eb"/>');
+    parts.push('<text x="'+(lx+12)+'" y="'+(ly+22)+'" font-size="14" font-weight="600" fill="#374151">圖例</text>');
+    for(var kk=0;kk<items.length;kk++){
+      var yy=ly+42+kk*20;
+      parts.push('<circle cx="'+(lx+20)+'" cy="'+(yy-4)+'" r="7" fill="'+items[kk].fill+'" stroke="'+items[kk].line+'" stroke-width="1.5"/>');
+      parts.push('<text x="'+(lx+34)+'" y="'+yy+'" font-size="13" fill="#374151">'+esc(items[kk].label)+'</text>');
+    }
+
+    VIEW_H=parkY+120;
+    svg.setAttribute("viewBox","0 0 1000 "+VIEW_H);
+    svg.innerHTML=parts.join("");
+
+    // 彈窗開啟時：SVG 剛整份重建，錨點元素已被丟棄，需重新定位（否則彈窗會跳到左上角）
+    try{ if(pop && pop.style.display==="block" && typeof placePop==="function") placePop(); }catch(_){}
+
+    // 同步工具列
+    document.getElementById("btnPark").textContent="停車區："+(C.parking&&C.parking.enabled?"開":"關");
+    document.getElementById("btnPark").classList.toggle("active", !!(C.parking&&C.parking.enabled));
+    document.getElementById("btnPark").style.display=(mode==="banquet"||mode==="meeting"||mode==="outdoor")?"none":"";
+    document.getElementById("btnScenario").textContent="場景："+(state.activeScenario||"預設");
+    document.getElementById("btnScenario").style.display=(mode==="grid")?"":"none";
+
+    syncConfigValues();
+    if(typeof updateGuestList==="function") updateGuestList();
+  }
+
+
+
+  /* ---------- 宴請圓桌（banquet） ---------- */
+  function tableGeom(t){
+    var n=clamp(t.seats,8,20), seatR=13;
+    var ring=(2*seatR+8)/(2*Math.sin(Math.PI/n));
+    if(ring<56) ring=56;
+    var core=Math.max(36, ring-seatR-12);
+    return {ring:ring, core:core, seatR:seatR};
+  }
+  function findTable(id){
+    var ts=(state.config.banquet&&state.config.banquet.tables)||[];
+    for(var i=0;i<ts.length;i++){ if(ts[i].id===id) return ts[i]; }
+    return null;
+  }
+  // 工作人員座位區：座談會（grid）與會議（meeting）兩模式共用。
+  // 鑰匙前綴區分模式，確保切換模式後座位資料不互串：grid→gS_ / meeting→mM_
+  function staffKeyPrefix(mode){ return (mode==="meeting")? "mM_" : "gS_"; }
+  function staffSeatList(C, mode){
+    var out=[];
+    var stf=(C.staff && C.staff.enabled)? C.staff : null;
+    if(!stf) return out;
+    var prefix=staffKeyPrefix(mode), pos=stf.pos||"both";
+    if(pos==="left"||pos==="right"||pos==="both"){
+      var n=clamp(stf.sideCount||6,1,20);
+      if(pos==="left"||pos==="both"){ for(var i=0;i<n;i++){ out.push({key:prefix+"L"+i, side:"left", idx:i}); } }
+      if(pos==="right"||pos==="both"){ for(var i=0;i<n;i++){ out.push({key:prefix+"R"+i, side:"right", idx:i}); } }
+    }
+    if(pos==="back"){
+      var br=clamp(stf.backRows||1,1,4), bc=clamp(stf.backCols||8,1,16);
+      for(var r=0;r<br;r++){ for(var c=0;c<bc;c++){ out.push({key:prefix+"B"+r+"_"+c, side:"back", idx:(r*bc+c), r:r, c:c}); } }
+    }
+    return out;
+  }
+  var PENDING_STAFF_NAMES=[];   // 工作人員姓名延後繪製（置於所有圓點之上），避免被下一列圓點遮住
+  function flushStaffNames(parts){
+    PENDING_STAFF_NAMES.forEach(function(p){
+      var w=textW(p.name, p.nf)+10;
+      parts.push('<rect x="'+(p.x-w/2)+'" y="'+(p.y-p.nf*0.85)+'" width="'+w+'" height="'+(p.nf*1.35)+'" rx="4" fill="#ffffff" opacity="0.95" stroke="#fde68a" stroke-width="1" pointer-events="none"/>');
+      parts.push('<text x="'+p.x+'" y="'+p.y+'" text-anchor="middle" font-size="'+p.nf+'" fill="#b45309" pointer-events="none">'+esc(p.name)+'</text>');
+    });
+    PENDING_STAFF_NAMES.length=0;
+  }
+  // 工作人員座位圓點（虛線描邊＋淺灰底，與一般席位區分）；可點擊填寫姓名／部門／職稱
+  function staffSeatCircle(parts, key, x, y, r, label){
+    var C=state.config;
+    var seat=state.seatsStaff[key]||{status:"empty",name:""};
+    var st=null;
+    for(var k=0;k<C.statuses.length;k++){ if(C.statuses[k].key===seat.status){ st=C.statuses[k]; break; } }
+    if(!st) st={fill:"#e5e7eb",line:"#9ca3af"};
+    parts.push('<circle class="stseat" data-staff="'+key+'" cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+st.fill+'" stroke="'+st.line+'" stroke-width="2" stroke-dasharray="4 3" style="cursor:pointer"/>');
+    parts.push('<text x="'+x+'" y="'+(y+r*0.32)+'" text-anchor="middle" font-size="'+(r*0.78)+'" fill="#374151" pointer-events="none">'+esc(label)+'</text>');
+    if(seat.name){
+      var avail=r*2*0.92, nf=11; while(nf>7 && textW(seat.name, nf)>avail) nf-=0.5;
+      var ntext=seat.name;
+      if(textW(seat.name, nf)>avail){ var nn=seat.name.length; while(nn>1 && textW(seat.name.slice(0,nn)+"…", 7)>avail) nn--; ntext=seat.name.slice(0,nn)+"…"; }
+      PENDING_STAFF_NAMES.push({ x:x, y:y+r+12, name:ntext, nf:nf });
+    }
+  }
+  function drawGrid(parts, C){
+    var L=layout();
+    var labels=rowLabels(C.rows);
+    var lastSeatY=L.seatY(C.rows-1);
+    if(C.showStage){
+      var names=state.scenarios[state.activeScenario]||[];
+      var N=names.length, gapB=16, margin=(N>=7?24:60);
+      var bw=Math.min(150,(1000-2*margin-(N-1)*gapB)/N);
+      if(bw<40) bw=40;
+      var total=N*bw+(N-1)*gapB, sx=(1000-total)/2, sy=112, bh=86;
+      var ci=centerIdx(N);
+      parts.push('<text x="'+sx+'" y="'+(sy-8)+'" font-size="13" fill="#6b7280">主講台（'+esc(state.activeScenario||"")+'）</text>');
+      for(var i=0;i<N;i++){
+        var x=sx+i*(bw+gapB);
+        var isC=ci.indexOf(i)>=0;
+        var fill=isC? "#fef3c7":"#dbeafe", line=isC? "#d97706":"#2563eb";
+        parts.push('<rect class="stage" data-stage="'+i+'" x="'+x+'" y="'+sy+'" width="'+bw+'" height="'+bh+'" rx="8" fill="'+fill+'" stroke="'+line+'" stroke-width="2" style="cursor:pointer"/>');
+        var nm=names[i]||("主位"+(i+1));
+        // 單行顯示整個嘉賓名稱：先縮字，仍過寬才壓縮字距，永不分行
+        var availW=bw-12;
+        var fit=fitOneLine(nm, availW, 14, 9);
+        var areaTop=sy+22, areaBot=sy+bh-10;
+        var nmY=(areaTop+areaBot)/2 + fit.size*0.36;
+        var tlAttr=fit.squeeze? ' textLength="'+availW+'" lengthAdjust="spacingAndGlyphs"':'';
+        parts.push('<text x="'+(x+bw/2)+'" y="'+nmY+'" text-anchor="middle" font-size="'+fit.size+'"'+tlAttr+' font-weight="600" fill="#1f2937" pointer-events="none">'+esc(nm)+'</text>');
+        parts.push('<text x="'+(x+bw/2)+'" y="'+(sy+16)+'" text-anchor="middle" font-size="11" fill="#6b7280" pointer-events="none">'+(isC?"主位（中央）":"主位"+(i+1))+'</text>');
+      }
+    }
+    var titleY=SEAT_TOP-30;
+    var tstr="與會者座位（"+C.rows+"排×"+C.cols+"位＝"+(C.rows*C.cols)+"）";
+    var tw=Math.max(170, tstr.length*13);   // 估算文字寬度，墊白底確保不被覆蓋
+    parts.push('<rect x="'+(500-tw/2-10)+'" y="'+(titleY-16)+'" width="'+(tw+20)+'" height="24" rx="7" fill="#ffffff" opacity="1" stroke="#d1d5db" stroke-width="1"/>');
+    parts.push('<text x="500" y="'+titleY+'" text-anchor="middle" font-size="13" fill="#6b7280">'+esc(tstr)+'</text>');
+    for(var r=0;r<C.rows;r++){
+      for(var c=0;c<C.cols;c++){
+        var id=labels[r]+(c+1);
+        var seat=state.seats[id]||{status:"empty",name:""};
+        var cx=L.seatX(c, r), cy=L.seatY(r);
+        var st=null;
+        for(var k=0;k<C.statuses.length;k++){ if(C.statuses[k].key===seat.status){ st=C.statuses[k]; break; } }
+        if(!st) st={fill:"#e5e7eb",line:"#9ca3af"};
+        var idFont=Math.max(9, Math.round(L.r*0.62));
+        parts.push('<circle class="seat" data-seat="'+id+'" cx="'+cx+'" cy="'+cy+'" r="'+L.r+'" fill="'+st.fill+'" stroke="'+st.line+'" stroke-width="2" style="cursor:pointer"/>');
+        parts.push('<text x="'+cx+'" y="'+(cy+Math.round(L.r*0.32))+'" text-anchor="middle" font-size="'+idFont+'" fill="#374151" pointer-events="none">'+esc(id)+'</text>');
+        if(seat.name){
+          // 姓名限制在「本列寬度內」：先縮字，仍過寬才截斷加省略號，避免與左右鄰座姓名重疊
+          var nameAvail=L.effSX*0.92;
+          var nf=11; while(nf>7 && textW(seat.name, nf)>nameAvail) nf-=0.5;
+          var ntext=seat.name;
+          if(textW(seat.name, nf)>nameAvail){
+            var nn=seat.name.length;
+            while(nn>1 && textW(seat.name.slice(0,nn)+"…", 7)>nameAvail) nn--;
+            ntext=seat.name.slice(0,nn)+"…";
+          }
+          parts.push('<text x="'+cx+'" y="'+(cy+L.r+12)+'" text-anchor="middle" font-size="'+nf+'" fill="#b45309" pointer-events="none">'+esc(ntext)+'</text>');
+        }
+      }
+    }
+    var ax=aisleX(L);
+    if(ax!==null){
+      var aisleRows=C.aisleRows||0;
+      var lastAisleRow=(aisleRows>0 && aisleRows<C.rows)? aisleRows-1 : C.rows-1;
+      var ay=SEAT_TOP + lastAisleRow/2*PITCH_Y;
+      parts.push('<text x="'+ax+'" y="'+ay+'" text-anchor="middle" font-size="13" fill="#9ca3af" transform="rotate(-90 '+ax+' '+ay+')" pointer-events="none">通道</text>');
+    }
+    var exitsArr=C.exits||[];
+    var hasBottom=exitsArr.some(function(e){ return e.edge==="bottom"; });
+    var parkY=lastSeatY + (hasBottom? 70:44);
+    // 工作人員座位區（grid：兩側直向 column / 後方橫排）
+    var staffListG=staffSeatList(C, "grid");
+    if(staffListG.length){
+      PENDING_STAFF_NAMES.length=0;
+      var seatLeftEdge=Math.min(L.startX, L.startXc) - L.effSX/2;
+      var staffLX=(L.EPAD + seatLeftEdge)/2;
+      var staffRX=1000 - staffLX;
+      var staffR=18, topY=SEAT_TOP+20, botY=lastSeatY;   // 頂端預留標籤空間，避免首顆圓點壓住「工作人員」字
+      var hasSide=staffListG.some(function(s){ return s.side!=="back"; });
+      staffListG.forEach(function(s){
+        if(s.side==="left" || s.side==="right"){
+          var x=(s.side==="left")? staffLX : staffRX;
+          var arr2=staffListG.filter(function(z){ return z.side===s.side; });
+          var y=(arr2.length>1)? (topY + s.idx*(botY-topY)/(arr2.length-1)) : (topY+botY)/2;
+          staffSeatCircle(parts, s.key, x, y, staffR, String(s.idx+1));
+        }
+      });
+      if(hasSide){
+        // 標籤墊白底 pill 並最後繪製（置頂），確保不被圓點或裝飾遮住；左／右側有座位才在該側標註
+        var labelY=SEAT_TOP-20, lw=66;
+        var sidesX=[];
+        if(staffListG.some(function(s){ return s.side==="left"; })) sidesX.push(staffLX);
+        if(staffListG.some(function(s){ return s.side==="right"; })) sidesX.push(staffRX);
+        sidesX.forEach(function(sx){
+          parts.push('<rect x="'+(sx-lw/2)+'" y="'+(labelY-13)+'" width="'+lw+'" height="18" rx="9" fill="#ffffff" opacity="0.96" stroke="#cbd5e1" stroke-width="1" pointer-events="none"/>');
+          parts.push('<text x="'+sx+'" y="'+labelY+'" text-anchor="middle" font-size="12" font-weight="700" fill="#64748b" pointer-events="none">工作人員</text>');
+        });
+      }
+      var hasBack=staffListG.some(function(s){ return s.side==="back"; });
+      if(hasBack){
+        var br2=clamp(C.staff.backRows||1,1,4), bc2=clamp(C.staff.backCols||8,1,16);
+        var backTop=lastSeatY + L.r + 30;
+        var blockW=Math.min(940, bc2*56+20), blockX=(1000-blockW)/2;
+        parts.push('<rect x="'+blockX+'" y="'+(backTop-26)+'" width="'+blockW+'" height="'+(br2*60+36)+'" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>');
+        parts.push('<text x="500" y="'+(backTop-10)+'" text-anchor="middle" font-size="13" font-weight="700" fill="#374151" pointer-events="none">'+esc(C.staff.label||"工作人員座位區")+'</text>');
+        staffListG.forEach(function(s){
+          if(s.side!=="back") return;
+          var cx=blockX+14+s.c*56+28, cy=backTop+18+s.r*60+14;
+          staffSeatCircle(parts, s.key, cx, cy, 18, String(s.idx+1));
+        });
+        parkY=backTop + br2*60 + 24;   // 停車區／圖例 下移，避免壓到後方工作人員區
+      }
+      flushStaffNames(parts);   // 工作人員姓名置頂繪製，避免被下一列圓點遮住
+    }
+    var area={ left:L.startX - L.effSX/2, right:L.startX + L.leftW + L.gap + L.rightW - L.effSX/2, top:SEAT_TOP, bottom:lastSeatY + L.r };
+    return { area:area, parkY:parkY };
+  }
+  function drawBanquet(parts, C){
+    var tables=(C.banquet&&C.banquet.tables)||[];
+    if(!tables.length){
+      parts.push('<text x="500" y="430" text-anchor="middle" font-size="16" fill="#9ca3af">尚無圓桌。請在左側「圓桌設定」按「＋新增圓桌」，或於「場地設定」切回座談會模式。</text>');
+      return { area:{left:40,right:960,top:120,bottom:440}, parkY:520 };
+    }
+    var minL=1e9,maxR=-1e9,minT=1e9,maxB=-1e9;
+    tables.forEach(function(t){
+      var g=tableGeom(t);
+      var cx=t.x, cy=t.y;
+      parts.push('<circle class="table-core" data-table="'+esc(t.id)+'" cx="'+cx+'" cy="'+cy+'" r="'+g.core+'" fill="#f3f4f6" stroke="#9ca3af" stroke-width="2" style="cursor:move"/>');
+      parts.push('<text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" font-size="15" font-weight="700" fill="#374151" pointer-events="none">'+esc(t.label||"圓桌")+(t.isMain?" ★":"")+'</text>');
+      for(var i=0;i<t.seats;i++){
+        var ang=-Math.PI/2 + i*(2*Math.PI/t.seats);
+        var sx=cx+g.ring*Math.cos(ang), sy=cy+g.ring*Math.sin(ang);
+        var key=t.id+"_"+i;
+        var seat=state.seatsBanquet[key]||{status:"empty",name:""};
+        var isHost=(i===0);
+        var st=null;
+        for(var k=0;k<C.statuses.length;k++){ if(C.statuses[k].key===seat.status){ st=C.statuses[k]; break; } }
+        if(!st) st={fill:"#e5e7eb",line:"#9ca3af"};
+        var fill=isHost? "#fef3c7": st.fill;
+        var line=isHost? "#d97706": st.line;
+        parts.push('<circle class="bseat" data-bseat="'+esc(key)+'" cx="'+sx+'" cy="'+sy+'" r="'+g.seatR+'" fill="'+fill+'" stroke="'+line+'" stroke-width="2" style="cursor:pointer"/>');
+        var lbl=isHost?"主":fmtNum(i+1);
+        parts.push('<text x="'+sx+'" y="'+(sy+g.seatR*0.34)+'" text-anchor="middle" font-size="'+Math.max(10,Math.round(g.seatR*0.8))+'" font-weight="'+(isHost?700:400)+'" fill="#374151" pointer-events="none">'+lbl+'</text>');
+        if(seat.name){
+          var nm2=seat.name.length>7? seat.name.slice(0,7)+"…" : seat.name;
+          parts.push('<text x="'+sx+'" y="'+(sy+g.seatR+13)+'" text-anchor="middle" font-size="11" fill="#b45309" pointer-events="none">'+esc(nm2)+'</text>');
+        }
+      }
+      minL=Math.min(minL, cx-g.ring-g.seatR); maxR=Math.max(maxR, cx+g.ring+g.seatR);
+      minT=Math.min(minT, cy-g.ring-g.seatR); maxB=Math.max(maxB, cy+g.ring+g.seatR+14);
+    });
+    var hasBottom=(C.exits||[]).some(function(e){ return e.edge==="bottom"; });
+    var parkY=maxB + (hasBottom? 30:18);
+    var area={ left:Math.max(20,minL), right:Math.min(980,maxR), top:Math.max(60,minT), bottom:maxB };
+    return { area:area, parkY:parkY };
+  }
+  function openBSeatPop(tid, i){
+    var key=tid+"_"+i;
+    var seat=state.seatsBanquet[key];
+    if(!seat){ seat=state.seatsBanquet[key]={status:"empty",name:""}; }
+    var t=findTable(tid); var isHost=(i===0);
+    var title=(t?esc(t.label):"圓桌")+" 座位 "+(isHost?"主位":("第"+fmtNum(i+1)+"位"));
+    var btns=state.config.statuses.map(function(st){
+      var on=seat.status===st.key? ' style="outline:3px solid '+st.line+';outline-offset:-3px;"':'';
+      return '<button type="button" data-st="'+esc(st.key)+'"'+on+'>'+esc(st.label)+'</button>';
+    }).join("");
+    pop.innerHTML='<div class="ph">'+title+'</div>'
+      +'<div class="pstatus">'+btns+'</div>'
+      +seatFieldsHtml(seat)
+      +'<div class="pfoot"><button type="button" id="pclear" class="ghost">清除姓名</button><button type="button" id="pclose" class="primary">完成</button></div>';
+    positionPop(document.querySelector('[data-bseat="'+key+'"]')||document.getElementById("stage"));
+    var stMap={}; state.config.statuses.forEach(function(s){ stMap[s.key]=s.line; });
+    pop.querySelectorAll(".pstatus button").forEach(function(b){
+      b.onclick=function(){
+        seat.status=b.getAttribute("data-st");
+        // 選取高亮：不關閉彈窗，讓使用者繼續填寫姓名／部門／職稱
+        pop.querySelectorAll(".pstatus button").forEach(function(x){
+          var k=x.getAttribute("data-st");
+          x.setAttribute("style", k===seat.status? 'outline:3px solid '+stMap[k]+';outline-offset:-3px;' : '');
+        });
+        save(); render();
+      };
+    });
+    var nm=bindSeatFields(seat);
+    document.getElementById("pclear").onclick=function(){ seat.name=""; save(); render(); closePop(); };
+    document.getElementById("pclose").onclick=function(){ render(); closePop(); };
+    setTimeout(function(){ if(nm) nm.focus(); }, 0);
+  }
+  function addTable(){
+    var B=state.config.banquet; if(!B.tables) B.tables=[];
+    var ts=B.tables, n=ts.length+1;
+    var x=200 + ((n-1)%3)*300;
+    var y=300 + Math.floor((n-1)/3)*300;
+    ts.push({id:"t"+Date.now(), label:"圓桌"+n, seats:10, isMain:(n===1), x:x, y:y});
+    save(); render(); syncConfigPanel();
+  }
+  function delTable(id){
+    var ts=state.config.banquet.tables;
+    state.config.banquet.tables=ts.filter(function(t){ return t.id!==id; });
+    Object.keys(state.seatsBanquet).forEach(function(k){ if(k.indexOf(id+"_")===0) delete state.seatsBanquet[k]; });
+    save(); render(); syncConfigPanel();
+  }
+  function renderTableList(){
+    var ts=(state.config.banquet&&state.config.banquet.tables)||[];
+    var box=document.getElementById("tableList");
+    if(!box) return;
+    box.innerHTML=ts.map(function(t){
+      return '<div class="tl-item" style="border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;">'
+        +'<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">'
+        +'<input data-tid="'+esc(t.id)+'" data-f="label" value="'+esc(t.label)+'" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:7px;padding:5px 7px;">'
+        +'<label style="font-size:12px;display:flex;align-items:center;gap:3px;white-space:nowrap;"><input type="checkbox" data-tid="'+esc(t.id)+'" data-f="isMain"'+(t.isMain?" checked":"")+'>主桌</label>'
+        +'<button class="ghost" data-del="'+esc(t.id)+'">刪除</button></div>'
+        +'<div style="display:flex;gap:8px;align-items:center;font-size:12px;">座位數 '
+        +'<input type="number" min="8" max="20" data-tid="'+esc(t.id)+'" data-f="seats" value="'+t.seats+'" style="width:62px;border:1px solid var(--line);border-radius:7px;padding:4px 6px;"></div>'
+        +'</div>';
+    }).join("");
+    box.querySelectorAll('input[data-f]').forEach(function(inp){
+      inp.oninput=function(){
+        var t=findTable(inp.getAttribute("data-tid")); if(!t) return;
+        var f=inp.getAttribute("data-f");
+        if(f==="seats"){ t.seats=clamp(inp.value,8,20); inp.value=t.seats; }
+        else if(f==="isMain"){ t.isMain=inp.checked; }
+        else { t[f]=inp.value; }
+        save(); render();
+      };
+      inp.onchange=inp.oninput;
+    });
+    box.querySelectorAll('button[data-del]').forEach(function(b){
+      b.onclick=function(){ delTable(b.getAttribute("data-del")); };
+    });
+  }
+  function seedTables(){
+    var ts=state.config.banquet.tables;
+    ts.push({id:"t"+Date.now()+"a", label:"主桌", seats:14, isMain:true, x:500, y:430});
+    ts.push({id:"t"+Date.now()+"b", label:"圓桌二", seats:10, isMain:false, x:200, y:430});
+    ts.push({id:"t"+Date.now()+"c", label:"圓桌三", seats:10, isMain:false, x:800, y:430});
+  }
+  function ringOrder(n, dir){
+    // 主位(0) 在頂端；其餘由主位向兩側環狀扇出，每個座號僅出現一次。
+    // 右側（順時針）：1,2,3…；左側（逆時針）：n-1,n-2,…；偶數桌補底部座位 n/2。
+    var seq=[0], r=1, l=n-1, mid=Math.floor((n-1)/2);
+    while(r<=mid){
+      if(dir==="right"){ seq.push(r); if(l>r) seq.push(l); }
+      else { seq.push(l); if(l>r) seq.push(r); }
+      r++; l--;
+    }
+    if(n%2===0 && seq.indexOf(n/2)<0) seq.push(n/2);
+    return seq;
+  }
+  function assignBanquet(){
+    var C=state.config;
+    var tables=(C.banquet&&C.banquet.tables)||[];
+    if(!tables.length){ alert("請先新增圓桌。"); return; }
+    var sel=document.getElementById("autoTable");
+    var tid=sel? sel.value : tables[0].id;
+    var t=findTable(tid)||tables[0];
+    var names=parseNames(document.getElementById("nameList").value);
+    if(!names.length){ alert("請先輸入名單（每行一位，或用 、或 ，分隔）。"); return; }
+    var order=ringOrder(t.seats, autoDir);
+    var onlyEmpty=document.getElementById("autoEmptyOnly").checked;
+    lastAuto={keys:[], backup:{}};
+    var placed=0, overflow=0, skipped=0;
+    for(var i=0;i<names.length;i++){
+      if(i>=order.length){ overflow++; continue; }
+      var key=t.id+"_"+order[i];
+      var seat=state.seatsBanquet[key]; if(!seat) seat=state.seatsBanquet[key]={status:"empty",name:""};
+      if(onlyEmpty && seat.name){ skipped++; continue; }
+      lastAuto.backup[key]={status:seat.status, name:seat.name};
+      lastAuto.keys.push(key);
+      seat.name=names[i]; seat.status="confirmed";
+      placed++;
+    }
+    save(); render();
+    var msg="已自動排入 "+placed+" 位（"+(t.label||"圓桌")+"）。";
+    if(overflow) msg+=" 名單尚餘 "+overflow+" 位超出該桌容量，未排入。";
+    if(skipped) msg+="（略過 "+skipped+" 個已有姓名的座位）";
+    document.getElementById("autoResult").textContent=msg;
+  }
+
+  /* ---------- 會議長桌（meeting） ---------- */
+  function meetingSeats(t){
+    t=t||{};
+    var cx=t.x||500, cy=t.y||430, w=t.w||520, h=t.h||200;
+    var pl=clamp(t.perLong,1,12), ps=clamp(t.perShort,1,4);
+    var gap=30, seats=[];
+    function edge(sideX, count){
+      for(var i=0;i<count;i++){
+        var fy = count===1? cy : (cy - h/2) + h*(i+0.5)/count;
+        seats.push({idx:seats.length, host:true, x:sideX, y:fy, lbl:"主"});
+      }
+    }
+    edge(cx-w/2-gap, ps);
+    edge(cx+w/2+gap, ps);
+    var lc=0;
+    function longs(edgeY, count){
+      for(var i=0;i<count;i++){
+        var fx=(cx-w/2)+w*(i+0.5)/count;
+        seats.push({idx:seats.length, host:false, x:fx, y:edgeY, lbl:String(++lc)});
+      }
+    }
+    longs(cy-h/2-gap, pl);
+    longs(cy+h/2+gap, pl);
+    return seats;
+  }
+  function meetingSeatOrder(t, dir){
+    var pl=clamp(t.perLong,1,12), ps=clamp(t.perShort,1,4);
+    var leftIdx=[], rightIdx=[], topIdx=[], botIdx=[];
+    for(var i=0;i<ps;i++) leftIdx.push(i);
+    for(var i=0;i<ps;i++) rightIdx.push(ps+i);
+    for(var i=0;i<pl;i++) topIdx.push(2*ps+i);
+    for(var i=0;i<pl;i++) botIdx.push(2*ps+pl+i);
+    function endOrder(arr){
+      if(arr.length<=1) return arr.slice();
+      var out=[], c=(arr.length-1)/2, l=Math.floor(c), r=Math.ceil(c);
+      while(l>=0 || r<arr.length){
+        if(r<arr.length) out.push(arr[r]);
+        if(l>=0 && l!==r) out.push(arr[l]);
+        r++; l--;
+      }
+      return out;
+    }
+    var first=(dir==="left")? leftIdx:rightIdx;
+    var second=(dir==="left")? rightIdx:leftIdx;
+    var order=endOrder(first).concat(endOrder(second));
+    for(var i=0;i<pl;i++){ order.push(topIdx[i]); order.push(botIdx[i]); }
+    return order;
+  }
+  function drawMeeting(parts, C){
+    var t=(C.meeting&&C.meeting.table);
+    if(!t){
+      parts.push('<text x="500" y="430" text-anchor="middle" font-size="16" fill="#9ca3af">尚無會議桌。請在左側「會議桌設定」設定長邊／短邊座位數與桌型，或於「場地設定」切回其他模式。</text>');
+      return { area:{left:40,right:960,top:120,bottom:440}, parkY:520 };
+    }
+    var seats=meetingSeats(t);
+    parts.push('<rect class="mtable" data-mtable="1" x="'+(t.x-t.w/2)+'" y="'+(t.y-t.h/2)+'" width="'+t.w+'" height="'+t.h+'" rx="10" fill="#f3f4f6" stroke="#9ca3af" stroke-width="2" style="cursor:move"/>');
+    parts.push('<text x="'+t.x+'" y="'+(t.y+6)+'" text-anchor="middle" font-size="17" font-weight="700" fill="#374151" pointer-events="none">'+esc(t.label||"會議桌")+'</text>');
+    seats.forEach(function(s){
+      var seat=state.seatsMeeting[s.idx]||{status:"empty",name:""};
+      var isHost=s.host, st=null;
+      for(var k=0;k<C.statuses.length;k++){ if(C.statuses[k].key===seat.status){ st=C.statuses[k]; break; } }
+      if(!st) st={fill:"#e5e7eb",line:"#9ca3af"};
+      var fill=isHost? "#fef3c7": st.fill, line=isHost? "#d97706": st.line;
+      parts.push('<circle class="mseat" data-mseat="'+s.idx+'" cx="'+s.x+'" cy="'+s.y+'" r="13" fill="'+fill+'" stroke="'+line+'" stroke-width="2" style="cursor:pointer"/>');
+      parts.push('<text x="'+s.x+'" y="'+(s.y+4)+'" text-anchor="middle" font-size="13" font-weight="'+(isHost?700:400)+'" fill="#374151" pointer-events="none">'+esc(s.lbl)+'</text>');
+      if(seat.name){
+        var nm2=seat.name.length>7? seat.name.slice(0,7)+"…" : seat.name;
+        parts.push('<text x="'+s.x+'" y="'+(s.y+24)+'" text-anchor="middle" font-size="11" fill="#b45309" pointer-events="none">'+esc(nm2)+'</text>');
+      }
+    });
+    var minL=t.x-t.w/2-42, maxR=t.x+t.w/2+42, minT=t.y-t.h/2-52, maxB=t.y+t.h/2+52;
+    var hasBottom=(C.exits||[]).some(function(e){ return e.edge==="bottom"; });
+    var parkY=maxB + (hasBottom?30:18);
+    // 工作人員座位區（meeting：兩側直向 column / 後方橫排）
+    var staffListM=staffSeatList(C, "meeting");
+    if(staffListM.length){
+      PENDING_STAFF_NAMES.length=0;
+      var mLeft=t.x-t.w/2, mRight=t.x+t.w/2;
+      var staffLXm=Math.max(30, mLeft-70), staffRXm=Math.min(970, mRight+70);
+      var topYm=t.y-t.h/2-10, botYm=t.y+t.h/2+10;
+      var hasSide=staffListM.some(function(s){ return s.side!=="back"; });
+      var staffTopM=topYm+18;   // 圓點整列下移 18px，預留「工作人員」標籤空間
+      staffListM.forEach(function(s){
+        if(s.side==="left" || s.side==="right"){
+          var x=(s.side==="left")? staffLXm : staffRXm;
+          var arr2=staffListM.filter(function(z){ return z.side===s.side; });
+          var y=(arr2.length>1)? (staffTopM + s.idx*(botYm-staffTopM)/(arr2.length-1)) : (staffTopM+botYm)/2;
+          staffSeatCircle(parts, s.key, x, y, 13, String(s.idx+1));
+        }
+      });
+      if(hasSide){
+        // 標籤墊白底 pill 並最後繪製（置頂），確保不被圓點或會議桌遮住；左／右側有座位才在該側標註
+        var labelYm=topYm-12, lwm=60;
+        var sidesXm=[];
+        if(staffListM.some(function(s){ return s.side==="left"; })) sidesXm.push(staffLXm);
+        if(staffListM.some(function(s){ return s.side==="right"; })) sidesXm.push(staffRXm);
+        sidesXm.forEach(function(sx){
+          parts.push('<rect x="'+(sx-lwm/2)+'" y="'+(labelYm-13)+'" width="'+lwm+'" height="18" rx="9" fill="#ffffff" opacity="0.96" stroke="#cbd5e1" stroke-width="1" pointer-events="none"/>');
+          parts.push('<text x="'+sx+'" y="'+labelYm+'" text-anchor="middle" font-size="11" font-weight="700" fill="#64748b" pointer-events="none">工作人員</text>');
+        });
+      }
+      var hasBack=staffListM.some(function(s){ return s.side==="back"; });
+      if(hasBack){
+        var br2=clamp(C.staff.backRows||1,1,4), bc2=clamp(C.staff.backCols||8,1,16);
+        var backTop=maxB + 40;
+        var blockW=Math.min(940, bc2*56+20), blockX=(1000-blockW)/2;
+        parts.push('<rect x="'+blockX+'" y="'+(backTop-26)+'" width="'+blockW+'" height="'+(br2*60+36)+'" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>');
+        parts.push('<text x="500" y="'+(backTop-10)+'" text-anchor="middle" font-size="13" font-weight="700" fill="#374151" pointer-events="none">'+esc(C.staff.label||"工作人員座位區")+'</text>');
+        staffListM.forEach(function(s){
+          if(s.side!=="back") return;
+          var cx=blockX+14+s.c*56+28, cy=backTop+18+s.r*60+14;
+          staffSeatCircle(parts, s.key, cx, cy, 18, String(s.idx+1));
+        });
+        parkY=backTop + br2*48 + 24;
+      }
+    }
+    return { area:{left:Math.max(20,minL), right:Math.min(980,maxR), top:Math.max(60,minT), bottom:maxB}, parkY:parkY };
+  }
+  function openMSeatPop(idx){
+    var t=(state.config.meeting&&state.config.meeting.table); if(!t) return;
+    var seats=meetingSeats(t), s=null;
+    for(var i=0;i<seats.length;i++){ if(seats[i].idx===idx){ s=seats[i]; break; } }
+    if(!s) return;
+    var seat=state.seatsMeeting[idx]; if(!seat) seat=state.seatsMeeting[idx]={status:"empty",name:""};
+    var title=(t.label||"會議桌")+" 座位 "+(s.host?"主位":("第"+s.lbl+"位"));
+    var btns=state.config.statuses.map(function(st){
+      var on=seat.status===st.key? ' style="outline:3px solid '+st.line+';outline-offset:-3px;"':'';
+      return '<button type="button" data-st="'+esc(st.key)+'"'+on+'>'+esc(st.label)+'</button>';
+    }).join("");
+    pop.innerHTML='<div class="ph">'+esc(title)+'</div>'
+      +'<div class="pstatus">'+btns+'</div>'
+      +seatFieldsHtml(seat)
+      +'<div class="pfoot"><button type="button" id="pclear" class="ghost">清除姓名</button><button type="button" id="pclose" class="primary">完成</button></div>';
+    positionPop(document.querySelector('[data-mseat="'+idx+'"]')||document.getElementById("stage"));
+    var stMap={}; state.config.statuses.forEach(function(s){ stMap[s.key]=s.line; });
+    pop.querySelectorAll(".pstatus button").forEach(function(b){
+      b.onclick=function(){
+        seat.status=b.getAttribute("data-st");
+        // 選取高亮：不關閉彈窗，讓使用者繼續填寫姓名／部門／職稱
+        pop.querySelectorAll(".pstatus button").forEach(function(x){
+          var k=x.getAttribute("data-st");
+          x.setAttribute("style", k===seat.status? 'outline:3px solid '+stMap[k]+';outline-offset:-3px;' : '');
+        });
+        save(); render();
+      };
+    });
+    var nm=bindSeatFields(seat);
+    document.getElementById("pclear").onclick=function(){ seat.name=""; save(); render(); closePop(); };
+    document.getElementById("pclose").onclick=function(){ render(); closePop(); };
+    setTimeout(function(){ if(nm) nm.focus(); }, 0);
+  }
+  function seedMeeting(){
+    state.config.meeting={ table:{ label:"會議主桌", x:500, y:430, w:520, h:200, perLong:6, perShort:1 } };
+  }
+  function assignMeeting(){
+    var C=state.config;
+    var t=(C.meeting&&C.meeting.table);
+    if(!t){ alert("請先設定會議桌。"); return; }
+    var names=parseNames(document.getElementById("nameList").value);
+    if(!names.length){ alert("請先輸入名單（每行一位，或用 、或 ，分隔）。"); return; }
+    var order=meetingSeatOrder(t, autoDir);
+    var onlyEmpty=document.getElementById("autoEmptyOnly").checked;
+    lastAuto={keys:[], backup:{}};
+    var placed=0, overflow=0, skipped=0;
+    for(var i=0;i<names.length;i++){
+      if(i>=order.length){ overflow++; continue; }
+      var key=order[i];
+      var seat=state.seatsMeeting[key]; if(!seat) seat=state.seatsMeeting[key]={status:"empty",name:""};
+      if(onlyEmpty && seat.name){ skipped++; continue; }
+      lastAuto.backup[key]={status:seat.status, name:seat.name};
+      lastAuto.keys.push(key);
+      seat.name=names[i]; seat.status="confirmed";
+      placed++;
+    }
+    save(); render();
+    var msg="已自動排入 "+placed+" 位（"+(t.label||"會議桌")+"）。";
+    if(overflow) msg+=" 名單尚餘 "+overflow+" 位超出座位容量，未排入。";
+    if(skipped) msg+="（略過 "+skipped+" 個已有姓名的座位）";
+    document.getElementById("autoResult").textContent=msg;
+  }
+
+  /* ---------- 戶外發佈（outdoor） ---------- */
+  // 分區站位：背景板 → 發佈台主位 → 攝影區 → 傳媒區 → 嘉賓區
+  function drawZoneGrid(parts, C, rows, cols, topY, label, dataAttr, store, keyPrefix){
+    var seatR=18, sx=44, sy=52;
+    var zoneW=Math.min(920, cols*sx+40);
+    var zoneX=(1000-zoneW)/2;
+    parts.push('<rect x="'+zoneX+'" y="'+topY+'" width="'+zoneW+'" height="'+(40+rows*sy)+'" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>');
+    parts.push('<text x="500" y="'+(topY-8)+'" text-anchor="middle" font-size="14" font-weight="700" fill="#374151">'+esc(label)+'</text>');
+    var startX=zoneX+(zoneW-cols*sx)/2 + sx/2;
+    for(var r=0;r<rows;r++){
+      for(var c=0;c<cols;c++){
+        var idx=r*cols+c;
+        var cx=startX+c*sx;
+        var cy=topY+40 + r*sy + sy/2;
+        var key=keyPrefix+idx;
+        var seat=store[key]||{status:"empty",name:""};
+        var st=null;
+        for(var k=0;k<C.statuses.length;k++){ if(C.statuses[k].key===seat.status){ st=C.statuses[k]; break; } }
+        if(!st) st={fill:"#e5e7eb",line:"#9ca3af"};
+        parts.push('<circle class="zseat" data-'+dataAttr+'="'+idx+'" cx="'+cx+'" cy="'+cy+'" r="'+seatR+'" fill="'+st.fill+'" stroke="'+st.line+'" stroke-width="2" style="cursor:pointer"/>');
+        parts.push('<text x="'+cx+'" y="'+(cy+5)+'" text-anchor="middle" font-size="12" fill="#374151" pointer-events="none">'+(idx+1)+'</text>');
+        if(seat.name){
+          // 姓名限制在本列寬度內：先縮字，仍過寬才截斷加省略號，避免與鄰座重疊
+          var nameAvail=sx*0.92;
+          var nf=11; while(nf>7 && textW(seat.name, nf)>nameAvail) nf-=0.5;
+          var ntext=seat.name;
+          if(textW(seat.name, nf)>nameAvail){
+            var nn=seat.name.length;
+            while(nn>1 && textW(seat.name.slice(0,nn)+"…", 7)>nameAvail) nn--;
+            ntext=seat.name.slice(0,nn)+"…";
+          }
+          parts.push('<text x="'+cx+'" y="'+(cy+seatR+12)+'" text-anchor="middle" font-size="'+nf+'" fill="#b45309" pointer-events="none">'+esc(ntext)+'</text>');
+        }
+      }
+    }
+    return { bottom: topY+40+rows*sy+8 };
+  }
+  function drawOutdoor(parts, C){
+    var O=C.outdoor || { backdrop:{label:"",enabled:true}, facilities:[{id:"f0",label:"投影屏幕",kind:"screen",enabled:true,x:120,y:124,w:760,h:42,fs:15}], podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8}, guest:{label:"嘉賓區",rows:3,cols:8} };
+    var top=70;
+    var y=top;
+    // 背景板（可設有／沒有）
+    var bd=O.backdrop||{};
+    if(bd.enabled!==false){
+      parts.push('<rect x="120" y="'+y+'" width="760" height="46" rx="8" fill="#1f2937"/>');
+      parts.push('<text x="500" y="'+(y+29)+'" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">'+esc(bd.label||"")+'</text>');
+      y += 46+30;
+    }
+    // 設施/裝置 改為自由定位：各設施自行設 X/Y 位置、寬高與字體大小，於下方「自由設施」區塊統一繪製，不佔用縱向鏈式佈局。
+    // 發佈台（可設有／沒有）
+    var pod=O.podium||{label:"發佈台",count:5};
+    if(pod.enabled!==false){
+      var podY=y, podH=74, podX=320, podW=360;
+      parts.push('<rect x="'+podX+'" y="'+podY+'" width="'+podW+'" height="'+podH+'" rx="8" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>');
+      parts.push('<text x="500" y="'+(podY-8)+'" text-anchor="middle" font-size="13" fill="#6b7280">'+esc(pod.label||"發佈台")+'</text>');
+      var n=clamp(pod.count||5,1,9);
+      var gapB=14, margin=40;
+      var bw=Math.min(120,(podW-2*margin-(n-1)*gapB)/n); if(bw<34) bw=34;
+      var total=n*bw+(n-1)*gapB, sx=(1000-total)/2, sy=podY+8, bh=podH-16;
+      for(var i=0;i<n;i++){
+        var x=sx+i*(bw+gapB);
+        var seat=state.seatsPodium["P"+i]||{status:"empty",name:""};
+        var st=null;
+        for(var k=0;k<C.statuses.length;k++){ if(C.statuses[k].key===seat.status){ st=C.statuses[k]; break; } }
+        if(!st) st={fill:"#e5e7eb",line:"#9ca3af"};
+        parts.push('<rect class="opod" data-opod="'+i+'" x="'+x+'" y="'+sy+'" width="'+bw+'" height="'+bh+'" rx="8" fill="'+st.fill+'" stroke="'+st.line+'" stroke-width="2" style="cursor:pointer"/>');
+        var nm=seat.name||("發佈位"+(i+1));
+        // 單行顯示整個嘉賓名稱：先縮字，仍過寬才壓縮字距，永不分行
+        var availW=bw-12;
+        var fit=fitOneLine(nm, availW, 14, 9);
+        var areaTop=sy+18, areaBot=sy+bh-8;
+        var nmY=(areaTop+areaBot)/2 + fit.size*0.36;
+        var tlAttr=fit.squeeze? ' textLength="'+availW+'" lengthAdjust="spacingAndGlyphs"':'';
+        parts.push('<text x="'+(x+bw/2)+'" y="'+nmY+'" text-anchor="middle" font-size="'+fit.size+'"'+tlAttr+' font-weight="600" fill="#1f2937" pointer-events="none">'+esc(nm)+'</text>');
+      }
+      y = podY + podH + 26;
+    }
+    // 攝影區（區域，無個別座位）
+    var photoY=y, photoH=54, photoX=320, photoW=360;
+    parts.push('<rect x="'+photoX+'" y="'+photoY+'" width="'+photoW+'" height="'+photoH+'" rx="8" fill="#fef9c3" stroke="#ca8a04" stroke-width="2" stroke-dasharray="6 4"/>');
+    parts.push('<text x="500" y="'+(photoY+photoH/2+5)+'" text-anchor="middle" font-size="14" font-weight="600" fill="#854d0e">'+esc((O.photo&&O.photo.label)||"攝影區")+'</text>');
+    y = photoY + photoH + 30;
+    // 傳媒區（可選擇有／沒有）
+    var m=O.media||{label:"傳媒區",rows:2,cols:8,enabled:true};
+    if(m.enabled!==false){
+      var mrows=clamp(m.rows||2,1,8), mcols=clamp(m.cols||8,1,16);
+      var mres=drawZoneGrid(parts, C, mrows, mcols, y, (m.label||"傳媒區"), "omseat", state.seatsMedia, "M");
+      y=mres.bottom+22;
+    }
+    // 嘉賓區（可選擇有／沒有）
+    var g=O.guest||{label:"嘉賓區",rows:3,cols:8,enabled:true};
+    var bottom;
+    if(g.enabled!==false){
+      var grows=clamp(g.rows||3,1,8), gcols=clamp(g.cols||8,1,16);
+      var gres=drawZoneGrid(parts, C, grows, gcols, y, (g.label||"嘉賓區"), "oguest", state.seatsGuest, "G");
+      bottom=gres.bottom;
+    } else {
+      bottom=y;
+    }
+    // 設施/裝置（自由定位：每項可設 X/Y 位置、寬高、標籤字體大小；投影屏幕黑條 or 標籤框），繪於各分區之上、置頂顯示
+    var af=(O.facilities||[]).filter(function(f){ return f.enabled!==false; });
+    for(var aki=0; aki<af.length; aki++){
+      var F2=af[aki], fx=(F2.x==null?120:F2.x), fy=(F2.y==null?124:F2.y), fwv=(F2.w==null?760:F2.w), fhv=(F2.h==null?42:F2.h), ffs=(F2.fs==null?15:F2.fs);
+      var fl2=F2.label||(F2.kind==="screen"?"投影屏幕":"設施");
+      if(F2.kind==="screen"){
+        parts.push('<rect data-ofac="'+esc(F2.id)+'" x="'+fx+'" y="'+fy+'" width="'+fwv+'" height="'+fhv+'" rx="8" fill="#0f172a" style="cursor:pointer"/>');
+      } else {
+        parts.push('<rect data-ofac="'+esc(F2.id)+'" x="'+fx+'" y="'+fy+'" width="'+fwv+'" height="'+fhv+'" rx="8" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2" style="cursor:pointer"/>');
+      }
+      var fcol2=F2.kind==="screen"?"#ffffff":"#334155";
+      parts.push('<text x="'+(fx+fwv/2)+'" y="'+(fy+fhv/2+ffs*0.35)+'" text-anchor="middle" font-size="'+ffs+'" font-weight="'+(F2.kind==="screen"?"700":"600")+'" fill="'+fcol2+'" pointer-events="none">'+esc(fl2)+'</text>');
+    }
+    var area={left:40, right:960, top:top, bottom:bottom};
+    var parkY=bottom+40;
+    return { area:area, parkY:parkY };
+  }
+
+  /* ---------- 浮動選單 ---------- */
+  var pop=document.getElementById("pop");
+  var box=document.querySelector(".svgbox");
+  function closePop(){ pop.style.display="none"; pop.innerHTML=""; popAnchorSel=null; }
+  // 標記「本次 click 事件中剛開啟彈窗」：側欄按鈕（如設施「位置」）開啟彈窗時，
+  // 點擊會冒泡到 document 的「點擊外部即關閉」監聽器而把彈窗瞬間關掉（看起來像完全沒反應）。
+  // setTimeout(0) 會在整輪事件派發完成後才執行，故可安全重置。
+  var popOpening=false;
+  // ⚠️ 彈窗錨點以「選擇器」記憶，而非元素本身：render() 每次都整份重建 SVG（svg.innerHTML=...），
+  // 原本當錨點的 <rect> 會被丟棄（detached），其 getBoundingClientRect() 全為 0，
+  // 彈窗就會被算到左上角 → 使用者看到「一打開就跳走」。改存選擇器即可在重建後重新找到活的元素。
+  var popAnchorSel=null;
+  var POP_ANCHOR_ATTRS=["data-ofac","data-seat","data-bseat","data-mseat","data-staff","data-opod","data-omseat","data-oguest","data-stage","data-screen","data-exit","data-table","data-mtable","data-fpos"];
+  function anchorSelector(el){
+    if(!el || !el.getAttribute) return null;
+    for(var i=0;i<POP_ANCHOR_ATTRS.length;i++){
+      var v=el.getAttribute(POP_ANCHOR_ATTRS[i]);
+      if(v!==null && v!=="") return "["+POP_ANCHOR_ATTRS[i]+"=\""+String(v).replace(/"/g,"")+"\"]";
+    }
+    return null;
+  }
+  function placePop(){
+    var el=null;
+    if(popAnchorSel){ try{ el=document.querySelector(popAnchorSel); }catch(_){ el=null; } }
+    if(!el) el=document.getElementById("stage");
+    if(!el) return;
+    var br, er;
+    try{ br=box.getBoundingClientRect(); er=el.getBoundingClientRect(); }catch(_){ return; }
+    var pw=pop.offsetWidth, ph=pop.offsetHeight;
+    var left=er.left-br.left+er.width/2-pw/2;
+    var top=er.bottom-br.top+8;
+    if(top+ph>br.height) top=er.top-br.top-ph-8; // 溢出下方則翻到上方
+    left=Math.min(Math.max(4,left), Math.max(4, br.width-pw-4));
+    top=Math.min(Math.max(4,top), Math.max(4, br.height-ph-4));
+    pop.style.left=left+"px"; pop.style.top=top+"px";
+  }
+  function positionPop(el){
+    popOpening=true; setTimeout(function(){ popOpening=false; },0);
+    popAnchorSel=anchorSelector(el);
+    pop.style.display="block";
+    placePop();
+  }
+  // 出席者資料欄（姓名／部門／機構／職稱）：各模式座位彈窗共用
+  function seatFieldsHtml(seat){
+    return '<label class="pl">出席者姓名</label>'
+      +'<input id="pname" class="pin" value="'+esc(seat.name||"")+'" placeholder="留空則不顯示">'
+      +'<label class="pl">部門／機構</label>'
+      +'<input id="porg" class="pin" value="'+esc(seat.org||"")+'" placeholder="如：經濟財政司司長辦公室">'
+      +'<label class="pl">職稱</label>'
+      +'<input id="ptitle" class="pin" value="'+esc(seat.title||"")+'" placeholder="如：司長、局長、主席">';
+  }
+  // 綁定並回傳姓名輸入框；部門／職稱不改圖面，只更新名單
+  function bindSeatFields(seat){
+    var nm=document.getElementById("pname");
+    if(nm) nm.oninput=function(e){ seat.name=e.target.value; save(); render(); };
+    var og=document.getElementById("porg");
+    if(og) og.oninput=function(e){ seat.org=e.target.value; save(); updateGuestList(); };
+    var ti=document.getElementById("ptitle");
+    if(ti) ti.oninput=function(e){ seat.title=e.target.value; save(); updateGuestList(); };
+    return nm;
+  }
+  function openSeatPop(el, id){
+    var seat=state.seats[id]; if(!seat) return;
+    var btns=state.config.statuses.map(function(st){
+      var on=seat.status===st.key? ' style="outline:3px solid '+st.line+';outline-offset:-3px;"':'';
+      return '<button type="button" data-st="'+esc(st.key)+'"'+on+'>'+esc(st.label)+'</button>';
+    }).join("");
+    pop.innerHTML='<div class="ph">座位 '+esc(id)+'</div>'
+      +'<div class="pstatus">'+btns+'</div>'
+      +seatFieldsHtml(seat)
+      +'<div class="pfoot"><button type="button" id="pclear" class="ghost">清除姓名</button><button type="button" id="pclose" class="primary">完成</button></div>';
+    positionPop(el);
+    var stMap={}; state.config.statuses.forEach(function(s){ stMap[s.key]=s.line; });
+    pop.querySelectorAll(".pstatus button").forEach(function(b){
+      b.onclick=function(){
+        seat.status=b.getAttribute("data-st");
+        // 選取高亮：不關閉彈窗，讓使用者繼續填寫姓名／部門／職稱
+        pop.querySelectorAll(".pstatus button").forEach(function(x){
+          var k=x.getAttribute("data-st");
+          x.setAttribute("style", k===seat.status? 'outline:3px solid '+stMap[k]+';outline-offset:-3px;' : '');
+        });
+        save(); render();
+      };
+    });
+    var nm=bindSeatFields(seat);
+    document.getElementById("pclear").onclick=function(){ seat.name=""; save(); render(); closePop(); };
+    document.getElementById("pclose").onclick=function(){ render(); closePop(); };
+    setTimeout(function(){ if(nm) nm.focus(); }, 0);
+  }
+  // 主講台（主位）：姓名存於 scenarios，部門／職稱存於 stageInfo（key = 場景名|序號）
+  function openStagePop(el, i){
+    var arr=state.scenarios[state.activeScenario]; if(!arr) return;
+    var nmv=arr[i]||""; var ci=centerIdx(arr.length);
+    var isC=ci.indexOf(i)>=0;
+    if(!state.stageInfo) state.stageInfo={};
+    var mk=state.activeScenario+"|"+i;
+    var meta=state.stageInfo[mk]||{org:"",title:""};
+    pop.innerHTML='<div class="ph">主位 '+(i+1)+(isC?"（中央）":"")+'</div>'
+      +'<label class="pl">姓名／職銜</label>'
+      +'<input id="sname" class="pin" value="'+esc(nmv)+'">'
+      +'<label class="pl">部門／機構</label>'
+      +'<input id="sorg" class="pin" value="'+esc(meta.org||"")+'" placeholder="如：經濟財政司">'
+      +'<label class="pl">職稱</label>'
+      +'<input id="stitle" class="pin" value="'+esc(meta.title||"")+'" placeholder="如：司長">'
+      +'<div class="pfoot"><button type="button" id="sclose" class="primary">完成</button></div>';
+    positionPop(el);
+    var inp=document.getElementById("sname");
+    inp.oninput=function(e){ arr[i]=e.target.value; save(); render(); updateGuestList(); };
+    var so=document.getElementById("sorg");
+    if(so) so.oninput=function(e){ meta.org=e.target.value; state.stageInfo[mk]=meta; save(); updateGuestList(); };
+    var sti=document.getElementById("stitle");
+    if(sti) sti.oninput=function(e){ meta.title=e.target.value; state.stageInfo[mk]=meta; save(); updateGuestList(); };
+    document.getElementById("sclose").onclick=closePop;
+    setTimeout(function(){ inp.focus(); }, 0);
+  }
+  // 戶外發佈：發佈台主位 / 傳媒座位 / 嘉賓座位 共用彈窗邏輯
+  function openOutdoorSeatPop(el, store, key, title){
+    var seat=store[key]; if(!seat) store[key]={status:"empty",name:""}; seat=store[key];
+    var btns=state.config.statuses.map(function(st){
+      var on=seat.status===st.key? ' style="outline:3px solid '+st.line+';outline-offset:-3px;"':'';
+      return '<button type="button" data-st="'+esc(st.key)+'"'+on+'>'+esc(st.label)+'</button>';
+    }).join("");
+    pop.innerHTML='<div class="ph">'+esc(title)+'</div>'
+      +'<div class="pstatus">'+btns+'</div>'
+      +seatFieldsHtml(seat)
+      +'<div class="pfoot"><button type="button" id="pclear" class="ghost">清除姓名</button><button type="button" id="pclose" class="primary">完成</button></div>';
+    positionPop(el);
+    var stMap={}; state.config.statuses.forEach(function(s){ stMap[s.key]=s.line; });
+    pop.querySelectorAll(".pstatus button").forEach(function(b){
+      b.onclick=function(){
+        seat.status=b.getAttribute("data-st");
+        // 選取高亮：不關閉彈窗，讓使用者繼續填寫姓名／部門／職稱
+        pop.querySelectorAll(".pstatus button").forEach(function(x){
+          var k=x.getAttribute("data-st");
+          x.setAttribute("style", k===seat.status? 'outline:3px solid '+stMap[k]+';outline-offset:-3px;' : '');
+        });
+        save(); render();
+      };
+    });
+    var nm=bindSeatFields(seat);
+    document.getElementById("pclear").onclick=function(){ seat.name=""; save(); render(); closePop(); };
+    document.getElementById("pclose").onclick=function(){ render(); closePop(); };
+    setTimeout(function(){ if(nm) nm.focus(); }, 0);
+  }
+  // 工作人員座位：與其他座位編輯方式一致（姓名／部門／機構／職稱），共用室外座位彈窗邏輯
+  function openStaffPop(el, key){
+    var C=state.config;
+    var label=(C.staff && C.staff.label) || "工作人員座位區";
+    openOutdoorSeatPop(el, state.seatsStaff, key, label);
+  }
+  function openOPodPop(i){
+    var O=state.config.outdoor||{};
+    openOutdoorSeatPop(document.querySelector('[data-opod="'+i+'"]')||document.getElementById("stage"), state.seatsPodium, "P"+i, ((O.podium&&O.podium.label)||"發佈台")+" 主位 "+(i+1));
+  }
+  function openOMSeatPop(idx){
+    var O=state.config.outdoor||{};
+    openOutdoorSeatPop(document.querySelector('[data-omseat="'+idx+'"]')||document.getElementById("stage"), state.seatsMedia, "M"+idx, ((O.media&&O.media.label)||"傳媒區")+" 座位 "+(idx+1));
+  }
+  function openOGuestPop(idx){
+    var O=state.config.outdoor||{};
+    openOutdoorSeatPop(document.querySelector('[data-oguest="'+idx+'"]')||document.getElementById("stage"), state.seatsGuest, "G"+idx, ((O.guest&&O.guest.label)||"嘉賓區")+" 座位 "+(idx+1));
+  }
+  // 戶外發佈：設施/裝置 彈窗（改名、改樣式、設 X/Y 位置、寬高、標籤字體大小、刪除）
+  function openFacPop(el, id){
+    var f=findFac(id); if(!f) return;
+    if(typeof f.x!=="number") f.x=120; if(typeof f.y!=="number") f.y=124; if(typeof f.w!=="number") f.w=760; if(typeof f.h!=="number") f.h=42; if(typeof f.fs!=="number") f.fs=15;
+    pop.innerHTML='<div class="ph">設施/裝置 · '+(f.label||"")+'</div>'
+      +'<label class="pl">名稱</label>'
+      +'<input id="facname" class="pin" value="'+esc(f.label||"")+'">'
+      +'<label class="pl" style="margin-top:8px;display:block;">樣式</label>'
+      +'<select id="fackind" class="pin">'
+      +'<option value="screen"'+((f.kind==="screen")?" selected":"")+'>投影屏幕（黑色屏條）</option>'
+      +'<option value="box"'+((f.kind!=="screen")?" selected":"")+'>標籤框（淺色方框）</option>'
+      +'</select>'
+      +'<div style="display:flex;gap:8px;margin-top:8px;">'
+      +'<label class="pl" style="flex:1;min-width:0;">X（左邊位置）<input id="facx" class="pin" type="number" value="'+f.x+'"></label>'
+      +'<label class="pl" style="flex:1;min-width:0;">Y（上方位置）<input id="facy" class="pin" type="number" value="'+f.y+'"></label>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:8px;">'
+      +'<label class="pl" style="flex:1;min-width:0;">寬度<input id="facw" class="pin" type="number" min="40" max="960" value="'+f.w+'"></label>'
+      +'<label class="pl" style="flex:1;min-width:0;">高度<input id="fach" class="pin" type="number" min="20" max="400" value="'+f.h+'"></label>'
+      +'<label class="pl" style="flex:1;min-width:0;">字體大小<input id="facfs" class="pin" type="number" min="8" max="48" value="'+f.fs+'"></label>'
+      +'</div>'
+      +'<div class="pfoot"><button type="button" id="facdel" class="ghost">刪除</button><button type="button" id="facclose" class="primary">完成</button></div>';
+    positionPop(el);
+    document.getElementById("facname").oninput=function(ev){ f.label=ev.target.value; save(); render(); };
+    document.getElementById("fackind").onchange=function(ev){ f.kind=ev.target.value; save(); render(); };
+    document.getElementById("facx").oninput=function(ev){ f.x=clamp(Math.round(+ev.target.value||0),0,960); save(); render(); };
+    document.getElementById("facy").oninput=function(ev){ f.y=clamp(Math.round(+ev.target.value||0),0,720); save(); render(); };
+    document.getElementById("facw").oninput=function(ev){ f.w=clamp(Math.round(+ev.target.value||0),40,960); save(); render(); };
+    document.getElementById("fach").oninput=function(ev){ f.h=clamp(Math.round(+ev.target.value||0),20,400); save(); render(); };
+    document.getElementById("facfs").oninput=function(ev){ f.fs=clamp(Math.round(+ev.target.value||0),8,48); save(); render(); };
+    document.getElementById("facdel").onclick=function(){ state.config.outdoor.facilities=state.config.outdoor.facilities.filter(function(x){ return x.id!==id; }); save(); render(); syncConfigPanel(); closePop(); };
+    document.getElementById("facclose").onclick=closePop;
+    setTimeout(function(){ var _n=document.getElementById("facname"); if(_n){ try{ _n.focus(); _n.select(); }catch(_e){ try{ _n.focus(); }catch(_e2){} } } }, 0);
+  }
+
+  /* ---------- 出入口（場地出入口位置） ---------- */
+  function exitColor(type){
+    if(type==="exit") return {fill:"#fee2e2", line:"#ef4444", name:"出口"};
+    if(type==="both") return {fill:"#dbeafe", line:"#2563eb", name:"出入口"};
+    return {fill:"#dcfce7", line:"#16a34a", name:"入口"};
+  }
+  function exitOptions(sel){
+    var map=[["entrance","入口"],["exit","出口"],["both","出入口"]];
+    return map.map(function(m){ return '<option value="'+m[0]+'"'+(m[0]===sel?" selected":"")+'>'+m[1]+'</option>'; }).join("");
+  }
+  function edgeOptions(sel){
+    var map=[["top","上方"],["bottom","下方"],["left","左方"],["right","右方"]];
+    return map.map(function(m){ return '<option value="'+m[0]+'"'+(m[0]===sel?" selected":"")+'>'+m[1]+'</option>'; }).join("");
+  }
+  function renderExitsInner(L, seatAreaLeft, seatAreaRight, seatAreaTop, seatAreaBottom){
+    var C=state.config, exits=C.exits||[], parts=[];
+    // 左／右側門出入口標籤＝貼座位圖最外圍（牆邊）的「豎直式」圓角標籤（文字旋轉 ±90°）；
+    // 同側有屏幕時屏幕已內移，二者互不重疊。上／下出入口仍為橫排。
+    var EPAD=6, EXITW=102, base=14, ph=30;
+    exits.forEach(function(e){
+      if(!e.edge) e.edge="bottom";
+      if(typeof e.pos!=="number"||isNaN(e.pos)) e.pos=0.5;
+      var px,py;
+      if(e.edge==="top"){ px=seatAreaLeft + e.pos*(seatAreaRight-seatAreaLeft); py=Math.max(20, TOP_EXIT_Y); }
+      else if(e.edge==="bottom"){ px=seatAreaLeft + e.pos*(seatAreaRight-seatAreaLeft); py=seatAreaBottom+30; }
+      else if(e.edge==="left"){ px=seatAreaLeft-30; py=seatAreaTop + e.pos*(seatAreaBottom-seatAreaTop); }
+      else { px=seatAreaRight+30; py=seatAreaTop + e.pos*(seatAreaBottom-seatAreaTop); }
+      var col=exitColor(e.type), id=esc(e.id);
+      if(e.edge==="left"||e.edge==="right"){
+        // 豎直式標籤：薄邊朝內（厚度 ph）、沿牆方向為長度（barLen）。貼最外圍牆邊，文字旋轉 ±90°。
+        var elabel=e.label||col.name, isLeft=(e.edge==="left");
+        var availH=(seatAreaBottom-seatAreaTop)-16; if(availH<40) availH=40;
+        var fs=base; while(fs>9 && textW(elabel, fs)>availH) fs-=0.5;
+        var barLen=textW(elabel, fs)+16;
+        if(barLen>availH) barLen=availH;
+        var cy=Math.max(seatAreaTop+barLen/2, Math.min(seatAreaBottom-barLen/2, py));
+        var cx=isLeft? (EPAD+ph/2) : (1000-EPAD-ph/2);
+        var rot=isLeft? -90 : 90;
+        var tl=(textW(elabel, fs)>availH)? ' textLength="'+(availH-16)+'" lengthAdjust="spacingAndGlyphs"':'';
+        parts.push('<g class="exit" data-exit="'+id+'" style="cursor:pointer">'
+          +'<rect x="'+(cx-ph/2)+'" y="'+(cy-barLen/2)+'" width="'+ph+'" height="'+barLen+'" rx="'+(ph/2)+'" fill="'+col.fill+'" stroke="'+col.line+'" stroke-width="2"/>'
+          +'<text transform="rotate('+rot+' '+cx+' '+cy+')" x="'+cx+'" y="'+cy+'" text-anchor="middle" font-size="'+fs+'"'+tl+' font-weight="600" fill="#1f2937">'+esc(elabel)+'</text>'
+          +'</g>');
+      } else {
+        var txt=e.label||col.name;
+        var w=Math.max(52, txt.length*15+26); w=Math.min(w,190);
+        var ft=fitOneLine(txt, w-24, 14, 9);
+        var tl=(textW(txt, ft.size)>w-24)? ' textLength="'+(w-24)+'" lengthAdjust="spacingAndGlyphs"':'';
+        px=Math.max(w/2+6, Math.min(994-w/2, px));
+        parts.push('<g class="exit" data-exit="'+id+'" style="cursor:pointer">'
+          +'<rect x="'+(px-w/2)+'" y="'+(py-15)+'" width="'+w+'" height="30" rx="15" fill="'+col.fill+'" stroke="'+col.line+'" stroke-width="2"/>'
+          +'<text x="'+px+'" y="'+(py+5)+'" text-anchor="middle" font-size="'+ft.size+'"'+tl+' font-weight="600" fill="#1f2937">'+esc(txt)+'</text>'
+          +'</g>');
+      }
+    });
+    return parts.join("");
+  }
+  function openExitPop(el, id){
+    var exits=state.config.exits||[], e=null, idx=-1;
+    for(var i=0;i<exits.length;i++){ if(exits[i].id===id){ e=exits[i]; idx=i; break; } }
+    if(!e) return;
+    pop.innerHTML='<div class="ph">出入口 · '+(e.label||"")+'</div>'
+      +'<label class="pl">名稱／標籤</label>'
+      +'<input id="exlabel" class="pin" value="'+esc(e.label||"")+'">'
+      +'<div style="display:flex;gap:8px;margin-top:8px;">'
+      +'<label class="pl" style="flex:1;min-width:0;">類型<select id="extype" class="pin">'+exitOptions(e.type)+'</select></label>'
+      +'<label class="pl" style="flex:1;min-width:0;">位置<select id="exedge" class="pin">'+edgeOptions(e.edge)+'</select></label>'
+      +'</div>'
+      +'<label class="pl" style="margin-top:8px;display:block;">沿邊位置（'+Math.round((e.pos||0)*100)+'%）</label>'
+      +'<input id="expos" class="pin" type="range" min="0" max="100" value="'+Math.round((e.pos||0)*100)+'" style="width:100%;">'
+      +'<div class="pfoot"><button type="button" id="exdel" class="ghost">刪除</button><button type="button" id="exclose" class="primary">完成</button></div>';
+    positionPop(el);
+    document.getElementById("exlabel").oninput=function(ev){ e.label=ev.target.value; save(); liveExit(id); };
+    document.getElementById("extype").onchange=function(ev){ e.type=ev.target.value; save(); render(); };
+    document.getElementById("exedge").onchange=function(ev){ e.edge=ev.target.value; save(); render(); };
+    document.getElementById("expos").oninput=function(ev){ e.pos=parseInt(ev.target.value,10)/100; save(); render(); };
+    document.getElementById("exdel").onclick=function(){ if(idx>=0) exits.splice(idx,1); save(); render(); closePop(); };
+    document.getElementById("exclose").onclick=closePop;
+    setTimeout(function(){ document.getElementById("exlabel").focus(); }, 0);
+  }
+  function renderExitList(){
+    var host=document.getElementById("exitList"); if(!host) return;
+    var exits=state.config.exits||[];
+    host.innerHTML=exits.map(function(e){
+      var id=esc(e.id);
+      return '<div class="sl-item" style="align-items:flex-start;">'
+        +'<div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;">'
+        +'<input data-ex="label" data-id="'+id+'" value="'+esc(e.label||"")+'" style="width:100%;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;">'
+        +'<div style="display:flex;gap:4px;">'
+        +'<select data-ex="type" data-id="'+id+'" style="flex:1;min-width:0;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;">'+exitOptions(e.type)+'</select>'
+        +'<select data-ex="edge" data-id="'+id+'" style="flex:1;min-width:0;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;">'+edgeOptions(e.edge)+'</select>'
+        +'</div>'
+        +'<input type="range" min="0" max="100" value="'+Math.round((e.pos||0)*100)+'" data-ex="pos" data-id="'+id+'" style="width:100%;">'
+        +'</div>'
+        +'<button class="ghost sl-del" data-exdel="'+id+'">－</button>'
+        +'</div>';
+    }).join("");
+    host.querySelectorAll("[data-ex]").forEach(function(inp){
+      var field=inp.getAttribute("data-ex"), id=inp.getAttribute("data-id");
+      inp.oninput=function(ev){ setExitField(id, field, ev.target.value); if(field==="label"||field==="pos") liveExit(id); else render(); };
+      inp.onchange=function(ev){ setExitField(id, field, ev.target.value); render(); };
+    });
+    host.querySelectorAll("[data-exdel]").forEach(function(b){
+      b.onclick=function(){ delExit(b.getAttribute("data-exdel")); };
+    });
+  }
+  function setExitField(id, field, val){
+    var exits=state.config.exits||[], e=null;
+    for(var i=0;i<exits.length;i++){ if(exits[i].id===id){ e=exits[i]; break; } }
+    if(!e) return;
+    if(field==="pos") e.pos=parseInt(val,10)/100;
+    else if(field==="type"||field==="edge") e[field]=val;
+    else e.label=val;
+    save();
+  }
+  function delExit(id){
+    var exits=state.config.exits||[];
+    for(var i=0;i<exits.length;i++){ if(exits[i].id===id){     exits.splice(i,1); break; } }
+    save(); render(); renderExitList();
+  }
+  function addExit(){
+    var exits=state.config.exits||[], n=exits.length+1;
+    // 選擇目前數量最少的邊，避免多個出入口重疊在同一位置
+    var edges=["bottom","right","top","left"];
+    var counts={bottom:0,right:0,top:0,left:0};
+    exits.forEach(function(e){ if(counts[e.edge]!=null) counts[e.edge]++; });
+    var edge=edges.slice().sort(function(a,b){ return counts[a]-counts[b]; })[0];
+    // 在該邊挑一個尚未被佔用的位置（百分比整數比對）
+    var posList=exits.filter(function(e){ return e.edge===edge; }).map(function(e){ return Math.round((e.pos==null?0.5:e.pos)*100); });
+    var candidates=[50,25,75,15,85,35,65,10,90,40,60,20,80,5,95,30,70,45,55];
+    var pos=0.5;
+    for(var ci=0; ci<candidates.length; ci++){ if(posList.indexOf(candidates[ci])<0){ pos=candidates[ci]/100; break; } }
+    exits.push({id:"e"+Date.now(), label:"出入口"+n, type:"both", edge:edge, pos:pos});
+    save(); render(); renderExitList();
+    renderScreenList();
+  }
+  function liveExit(id){
+    if(state.config.mode==="outdoor"){ render(); return; }
+    var layer=document.getElementById("stage").querySelector("#exitsLayer");
+    if(!layer) return;
+    var C=state.config, L=layout(), lastSeatY=L.seatY(C.rows-1);
+    var seatAreaLeft=L.startX-L.effSX/2, seatAreaRight=L.startX+L.leftW+L.gap+L.rightW-L.effSX/2;
+    layer.innerHTML=renderExitsInner(L, seatAreaLeft, seatAreaRight, SEAT_TOP, lastSeatY+L.r);
+  }
+
+  /* ---------- 投影屏幕（可編輯位置／多屏幕） ---------- */
+  function openScreenPop(el, id){
+    var screens=state.config.screens||[], s=null, idx=-1;
+    for(var i=0;i<screens.length;i++){ if(screens[i].id===id){ s=screens[i]; idx=i; break; } }
+    if(!s) return;
+    var dirOpts=[["top","上方橫向"],["left","左側直向"],["right","右側直向"]];
+    var dirSel='<select id="scdir" class="pin" style="margin-top:8px;">'+dirOpts.map(function(o){ return '<option value="'+o[0]+'"'+((s.dir||"top")===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>';
+    pop.innerHTML='<div class="ph">投影屏幕 · '+(s.label||"")+'</div>'
+      +'<label class="pl">名稱</label>'
+      +'<input id="sclabel" class="pin" value="'+esc(s.label||"")+'">'
+      +'<label class="pl" style="margin-top:8px;display:block;">方向</label>'
+      + dirSel
+      +'<div style="display:flex;gap:8px;margin-top:8px;">'
+      +'<label class="pl" style="flex:1;min-width:0;">X（左邊位置）<input id="scx" class="pin" type="number" value="'+s.x+'"></label>'
+      +'<label class="pl" style="flex:1;min-width:0;">Y（上方位置）<input id="scy" class="pin" type="number" value="'+s.y+'"></label>'
+      +'</div>'
+      +'<label class="pl" style="margin-top:8px;display:block;">長度（上方＝寬度；左右＝高度）</label>'
+      +'<input id="scw" class="pin" type="number" min="40" max="900" value="'+s.w+'">'
+      +'<div class="pfoot"><button type="button" id="scdel" class="ghost">刪除</button><button type="button" id="scclose" class="primary">完成</button></div>';
+    positionPop(el);
+    document.getElementById("sclabel").oninput=function(ev){ s.label=ev.target.value; save(); render(); };
+    document.getElementById("scdir").onchange=function(ev){ s.dir=ev.target.value; save(); render(); };
+    document.getElementById("scx").oninput=function(ev){ s.x=clamp(ev.target.value,0,960); save(); render(); };
+    document.getElementById("scy").oninput=function(ev){ s.y=clamp(ev.target.value,0,720); save(); render(); };
+    document.getElementById("scw").oninput=function(ev){ s.w=clamp(ev.target.value,40,900); save(); render(); };
+    document.getElementById("scdel").onclick=function(){ if(idx>=0) screens.splice(idx,1); save(); render(); closePop(); };
+    document.getElementById("scclose").onclick=closePop;
+    setTimeout(function(){ document.getElementById("sclabel").focus(); }, 0);
+  }
+  function renderScreenList(){
+    var host=document.getElementById("screenList"); if(!host) return;
+    var screens=state.config.screens||[];
+    var dirOpts=[["top","上方橫向"],["left","左側直向"],["right","右側直向"]];
+    host.innerHTML=screens.map(function(s){
+      var id=esc(s.id);
+      var dirSel='<select data-sc="dir" data-id="'+id+'" style="width:100%;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-top:4px;">'
+        +dirOpts.map(function(o){ return '<option value="'+o[0]+'"'+((s.dir||"top")===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>';
+      return '<div class="sl-item" style="align-items:flex-start;">'
+        +'<div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;">'
+        +'<input data-sc="label" data-id="'+id+'" value="'+esc(s.label||"")+'" placeholder="名稱" style="width:100%;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;">'
+        + dirSel
+        +'<div style="display:flex;gap:4px;">'
+        +'<input data-sc="x" data-id="'+id+'" type="number" value="'+s.x+'" title="X（左邊位置）" style="flex:1;min-width:0;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;">'
+        +'<input data-sc="y" data-id="'+id+'" type="number" value="'+s.y+'" title="Y（上方位置）" style="flex:1;min-width:0;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;">'
+        +'<input data-sc="w" data-id="'+id+'" type="number" value="'+s.w+'" title="長度（上方＝寬度；左右＝高度）" style="flex:1;min-width:0;font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;">'
+        +'</div>'
+        +'</div>'
+        +'<button class="ghost sl-del" data-scdel="'+id+'">－</button>'
+        +'</div>';
+    }).join("");
+    host.querySelectorAll("[data-sc]").forEach(function(inp){
+      var field=inp.getAttribute("data-sc"), id=inp.getAttribute("data-id");
+      if(field==="dir"){ inp.onchange=function(ev){ setScreenField(id, field, ev.target.value); }; }
+      else { inp.oninput=function(ev){ setScreenField(id, field, ev.target.value); }; }
+    });
+    host.querySelectorAll("[data-scdel]").forEach(function(b){
+      b.onclick=function(){ delScreen(b.getAttribute("data-scdel")); };
+    });
+  }
+  function setScreenField(id, field, val){
+    var screens=state.config.screens||[], s=null;
+    for(var i=0;i<screens.length;i++){ if(screens[i].id===id){ s=screens[i]; break; } }
+    if(!s) return;
+    if(field!=="label" && val==="") return;
+    if(field==="x") s.x=clamp(Math.round(+val||0),0,960);
+    else if(field==="y") s.y=clamp(Math.round(+val||0),0,720);
+    else if(field==="w") s.w=clamp(Math.round(+val||0),40,900);
+    else if(field==="dir") s.dir=val;
+    else s.label=val;
+    save(); render();
+  }
+  function delScreen(id){
+    var screens=state.config.screens||[];
+    for(var i=0;i<screens.length;i++){ if(screens[i].id===id){ screens.splice(i,1); break; } }
+    save(); render(); renderScreenList();
+  }
+  function addScreen(dir){
+    dir=dir||"top";
+    if(!state.config.screens) state.config.screens=[];
+    var screens=state.config.screens, n=screens.length+1;
+    if(dir==="left"){ screens.push({id:"s"+Date.now(), label:"左側屏幕"+n, dir:"left", x:18, y:264, w:420}); }
+    else if(dir==="right"){ screens.push({id:"s"+Date.now(), label:"右側屏幕"+n, dir:"right", x:940, y:264, w:420}); }
+    else { var x=40 + ((n-1)%3)*260; screens.push({id:"s"+Date.now(), label:"投影屏幕"+n, x:x, y:58, w:260}); }
+    save(); render(); renderScreenList();
+  }
+
+  /* ---------- SVG 事件 ---------- */
+  var svg=document.getElementById("stage");
+  svg.addEventListener("click", function(e){
+    if(inPreview) return;
+    var ex=e.target.closest("[data-exit]");
+    if(ex){ openExitPop(ex, ex.getAttribute("data-exit")); return; }
+    var sc=e.target.closest("[data-screen]");
+    if(sc){ openScreenPop(sc, sc.getAttribute("data-screen")); return; }
+    var ofac=e.target.closest("[data-ofac]");
+    if(ofac){ if(facDragged) return; openFacPop(ofac, ofac.getAttribute("data-ofac")); return; }
+    var bs=e.target.closest("[data-bseat]");
+    if(bs){ var kv=bs.getAttribute("data-bseat").split("_"); openBSeatPop(kv[0], parseInt(kv[1],10)); return; }
+    var ms=e.target.closest("[data-mseat]");
+    if(ms){ openMSeatPop(parseInt(ms.getAttribute("data-mseat"),10)); return; }
+    var sf=e.target.closest("[data-staff]");
+    if(sf){ openStaffPop(sf, sf.getAttribute("data-staff")); return; }
+    var pod=e.target.closest("[data-opod]");
+    if(pod){ openOPodPop(parseInt(pod.getAttribute("data-opod"),10)); return; }
+    var om=e.target.closest("[data-omseat]");
+    if(om){ openOMSeatPop(parseInt(om.getAttribute("data-omseat"),10)); return; }
+    var og=e.target.closest("[data-oguest]");
+    if(og){ openOGuestPop(parseInt(og.getAttribute("data-oguest"),10)); return; }
+    var seat=e.target.closest("[data-seat]");
+    if(seat){ openSeatPop(seat, seat.getAttribute("data-seat")); return; }
+    var st=e.target.closest("[data-stage]");
+    if(st){ openStagePop(st, parseInt(st.getAttribute("data-stage"),10)); }
+  });
+  svg.addEventListener("dblclick", function(e){
+    var seat=e.target.closest("[data-seat]");
+    if(seat){ openSeatPop(seat, seat.getAttribute("data-seat")); }
+  });
+  var dragT=null, dragOff={x:0,y:0};
+  var dragM=null, dragMOff={x:0,y:0};
+  var dragF=null, dragFOff={x:0,y:0}, facDragged=false, facDownPt=null;   // 設施/裝置 拖曳
+  var FAC_DRAG_THRESHOLD=4;   // 拖曳門檻（螢幕 px）：位移小於此值視為「點擊」，不算拖曳
+  function svgPoint(evt){
+    var svg=document.getElementById("stage");
+    try{
+      if(svg.createSVGPoint){   // 主流路徑：以 CTM 反算 SVG 使用者座標
+        var pt=svg.createSVGPoint(); pt.x=evt.clientX; pt.y=evt.clientY;
+        var m=svg.getScreenCTM(); if(m){ var p=pt.matrixTransform(m.inverse()); return {x:p.x, y:p.y}; }
+      }
+    }catch(e){}
+    // 後備：以 getBoundingClientRect + viewBox 自行換算（createSVGPoint 已棄用／不可用時）
+    var r=svg.getBoundingClientRect();
+    var vb=(svg.getAttribute("viewBox")||"0 0 1000 760").split(" ").map(Number);
+    if(!r.width||!r.height) return {x:0,y:0};
+    var scale=Math.min(r.width/vb[2], r.height/vb[3]);
+    var offX=(r.width-vb[2]*scale)/2, offY=(r.height-vb[3]*scale)/2;
+    return { x:(evt.clientX-r.left-offX)/scale+vb[0], y:(evt.clientY-r.top-offY)/scale+vb[1] };
+  }
+  svg.addEventListener("pointerdown", function(e){
+    // 雙指捏合中、或第二根手指落下時，不要誤啟動拖曳
+    if(pinch || (e.pointerType==="touch" && !e.isPrimary)){ e.preventDefault(); return; }
+    facDragged=false; facDownPt=null;   // 每次按下重置；拖曳標記保留到「下一次按下」才清，避免 click 與 setTimeout(0) 競態
+    if(!inPreview){
+      var fEl=e.target.closest("[data-ofac]");
+      if(fEl){
+        var fc=findFac(fEl.getAttribute("data-ofac"));
+        if(fc){
+          if(typeof fc.x!=="number") fc.x=120; if(typeof fc.y!=="number") fc.y=124;
+          var pf=svgPoint(e); dragF=fc; dragFOff={x:pf.x-fc.x, y:pf.y-fc.y}; facDragged=false;
+          facDownPt={x:e.clientX, y:e.clientY};   // 記錄按下點，供門檻判斷（手抖不應吃掉第一次點擊）
+          try{ svg.setPointerCapture(e.pointerId); }catch(_){}
+          e.preventDefault(); return;
+        }
+      }
+    }
+    var mtEl=e.target.closest("[data-mtable]");
+    if(mtEl){ var mt=state.config.meeting && state.config.meeting.table; if(mt){ var p=svgPoint(e); dragM=mt; dragMOff={x:p.x-mt.x, y:p.y-mt.y}; try{ svg.setPointerCapture(e.pointerId); }catch(_){} e.preventDefault(); return; } }
+    var tEl=e.target.closest("[data-table]");
+    if(!tEl) return;
+    var t=findTable(tEl.getAttribute("data-table")); if(!t) return;
+    var p=svgPoint(e); dragT=t; dragOff={x:p.x-t.x, y:p.y-t.y};
+    try{ svg.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
+  });
+  svg.addEventListener("pointermove", function(e){
+    if(dragF){
+      if(!facDragged && facDownPt){
+        var mdx=Math.abs((e.clientX||0)-facDownPt.x), mdy=Math.abs((e.clientY||0)-facDownPt.y);
+        if(mdx<FAC_DRAG_THRESHOLD && mdy<FAC_DRAG_THRESHOLD) return;   // 只是手抖：不拖曳、也不重繪（避免錨點被重建而失效）
+      }
+      facDragged=true;
+      var p3=svgPoint(e);
+      dragF.x=Math.max(0, Math.min(960, Math.round(p3.x-dragFOff.x)));
+      dragF.y=Math.max(0, Math.min(720, Math.round(p3.y-dragFOff.y)));
+      facDragged=true; render(); return;
+    }
+    if(dragT){
+      var p=svgPoint(e); dragT.x=Math.max(60,Math.min(940, p.x-dragOff.x)); dragT.y=Math.max(80,Math.min(900, p.y-dragOff.y));
+      render(); return;
+    }
+    if(dragM){
+      var p=svgPoint(e); dragM.x=Math.max(80,Math.min(920, p.x-dragMOff.x)); dragM.y=Math.max(90,Math.min(880, p.y-dragMOff.y));
+      render();
+    }
+  });
+  svg.addEventListener("pointerup", function(e){
+    if(dragT){ dragT=null; save(); }
+    if(dragM){ dragM=null; save(); }
+    if(dragF){ dragF=null; facDownPt=null; save(); syncConfigPanel(); }  // facDragged 保留到下次 pointerdown 才清，避免緊接的 click 又彈出編輯窗
+  });
+  svg.addEventListener("pointercancel", function(e){ if(dragT){ dragT=null; } if(dragM){ dragM=null; } if(dragF){ dragF=null; facDownPt=null; save(); } });
+  // 若「按下」的位置在彈窗內（例如在輸入框內拖曳選取文字、滑鼠最後在彈窗外才放開），
+  // 該次 click 不應關閉彈窗，否則選取會被中斷 → 無法複製／剪下。
+  var popPressInside=false;
+  document.addEventListener("mousedown", function(e){ popPressInside = !!(pop && pop.contains(e.target)); }, true);
+  document.addEventListener("click", function(e){
+    if(popOpening) return; // 本次點擊剛開啟彈窗（例如側欄設施「位置」鈕），不要立刻關掉
+    if(popPressInside) return; // 按下點在彈窗內：不論在哪裡放開都不要關（保護文字選取）
+    if(pop.style.display==="block" && !pop.contains(e.target) && !svg.contains(e.target)) closePop();
+  });
+
+  /* ---------- 行動版：圖面縮放／平移（觸控雙指與按鈕） ---------- */
+  // 作法：直接放大 SVG 的顯示尺寸（width/height px），svgbox 的 overflow:auto 即提供平移；
+  // svgPoint() 走 getScreenCTM()，會自動反映縮放與捲動，故拖曳／點選座標仍正確。
+  var viewScale=1;
+  var zoomBox=document.querySelector(".svgbox");
+  var zoomSvg=document.getElementById("stage");
+  function setZoom(scale, clientX, clientY){
+    scale=Math.max(1, Math.min(6, scale));
+    if(!zoomBox||!zoomSvg) return;
+    var rb=zoomBox.getBoundingClientRect();
+    var sx = (typeof clientX==="number")? (clientX-rb.left) : (rb.width/2);
+    var sy = (typeof clientY==="number")? (clientY-rb.top)  : (rb.height/2);
+    var zp=document.getElementById("zoomPct");
+    if(scale<=1){
+      zoomSvg.style.width=""; zoomSvg.style.height="";
+      viewScale=1; zoomBox.scrollLeft=0; zoomBox.scrollTop=0;
+      if(zp) zp.textContent="100%";
+      return;
+    }
+    var ax = sx + zoomBox.scrollLeft;   // 錨點：目前內容座標
+    var ay = sy + zoomBox.scrollTop;
+    var f = scale/viewScale;
+    var newW = zoomBox.clientWidth*scale;
+    var newH = newW*(760/1000);
+    zoomSvg.style.width=newW+"px";
+    zoomSvg.style.height=newH+"px";
+    zoomBox.scrollLeft = ax*f - sx;       // 保持錨點在手指／畫面原位
+    zoomBox.scrollTop  = ay*f - sy;
+    viewScale=scale;
+    if(zp) zp.textContent=Math.round(viewScale*100)+"%";
+  }
+  function zoomIn(){ setZoom(viewScale*1.3); }
+  function zoomOut(){ setZoom(viewScale/1.3); }
+  function resetZoom(){ setZoom(1); }
+  window.zoomIn=zoomIn; window.zoomOut=zoomOut; window.resetZoom=resetZoom;
+  // 雙指捏合縮放（以兩指中點為錨）
+  var pinch=null;
+  if(zoomBox){
+    zoomBox.addEventListener("touchstart", function(e){
+      if(e.touches.length===2){
+        dragT=null; dragM=null; dragF=null; facDragged=false;   // 取消進行中的拖曳
+        var dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+        pinch={ d0:Math.sqrt(dx*dx+dy*dy), s0:viewScale,
+                mx:(e.touches[0].clientX+e.touches[1].clientX)/2,
+                my:(e.touches[0].clientY+e.touches[1].clientY)/2 };
+      }
+    }, {passive:true});
+    zoomBox.addEventListener("touchmove", function(e){
+      if(pinch && e.touches.length===2){
+        e.preventDefault();   // 阻止瀏覽器自身的頁面縮放
+        var dx=e.touches[0].clientX-e.touches[1].clientX, dy=e.touches[0].clientY-e.touches[1].clientY;
+        var d=Math.sqrt(dx*dx+dy*dy);
+        if(pinch.d0>0){
+          setZoom(pinch.s0 * (d/pinch.d0), pinch.mx, pinch.my);
+          pinch.mx=(e.touches[0].clientX+e.touches[1].clientX)/2;
+          pinch.my=(e.touches[0].clientY+e.touches[1].clientY)/2;
+          pinch.s0=viewScale; pinch.d0=d;
+        }
+      }
+    }, {passive:false});
+    zoomBox.addEventListener("touchend", function(e){ if(e.touches.length<2) pinch=null; });
+    zoomBox.addEventListener("touchcancel", function(){ pinch=null; });
+  }
+
+  /* ---------- 場地設定面板 ---------- */
+  // 只設定欄位值與面板顯隱（不重建任何列表 innerHTML），供 render() 每幀呼叫，避免側欄輸入框打字時失焦
+  function syncConfigValues(){
+    var C=state.config;
+    document.getElementById("cfgActivity").value=C.activity||"";
+    document.getElementById("cfgVenue").value=C.venue||"";
+    document.getElementById("cfgShowTitle").checked=(C.showTitle!==false);
+    document.getElementById("cfgMode").value=C.mode||"grid";
+    document.getElementById("cfgRows").value=C.rows;
+    document.getElementById("cfgCols").value=C.cols;
+    document.getElementById("cfgAisle").value=C.aisleAfter;
+    document.getElementById("cfgAisleRows").value=C.aisleRows||0;
+    document.getElementById("cfgScreen").checked=!!C.showScreen;
+    document.getElementById("cfgStage").checked=!!C.showStage;
+    document.getElementById("cfgPark").checked=!!(C.parking&&C.parking.enabled);
+    document.getElementById("cfgParkLabel").value=C.parking?C.parking.label:"";
+    document.getElementById("cfgParkSub").value=C.parking?C.parking.sub:"";
+    document.getElementById("cfgShowExits").checked=!!C.showExits;
+    var mt=(C.meeting&&C.meeting.table)||{};
+    document.getElementById("cfgMTable").value=mt.label||"";
+    document.getElementById("cfgMPL").value=mt.perLong||6;
+    document.getElementById("cfgMPS").value=mt.perShort||1;
+    document.getElementById("cfgMW").value=mt.w||520;
+    document.getElementById("cfgMH").value=mt.h||200;
+    var gc=document.getElementById("gridControls"); if(gc) gc.style.display=(C.mode==="grid")?"":"none";
+    var tp=document.getElementById("tablePanel"); if(tp) tp.style.display=(C.mode==="banquet")?"":"none";
+    var mc=document.getElementById("meetingControls"); if(mc) mc.style.display=(C.mode==="meeting")?"":"none";
+    var oc=document.getElementById("outdoorControls"); if(oc) oc.style.display=(C.mode==="outdoor")?"":"none";
+    var sc2=document.getElementById("staffControls"); if(sc2) sc2.style.display=(C.mode==="grid"||C.mode==="meeting")?"":"none";
+    var cso=document.getElementById("cfgStaffOn"); if(cso) cso.checked=!!(C.staff&&C.staff.enabled);
+    var csl=document.getElementById("cfgStaffLabel"); if(csl) csl.value=(C.staff&&C.staff.label)||"";
+    var csp2=document.getElementById("cfgStaffPos"); if(csp2) csp2.value=(C.staff&&C.staff.pos)||"both";
+    var csd=document.getElementById("cfgStaffSide"); if(csd) csd.value=(C.staff&&C.staff.sideCount)||6;
+    var csr2=document.getElementById("cfgStaffBackR"); if(csr2) csr2.value=(C.staff&&C.staff.backRows)||1;
+    var csc2=document.getElementById("cfgStaffBackC"); if(csc2) csc2.value=(C.staff&&C.staff.backCols)||8;
+    syncStaffPanel();
+    var atw=document.getElementById("autoTableWrap"); if(atw) atw.style.display=(C.mode==="banquet")?"":"none";
+    var OO=(C.outdoor)||{};
+    document.getElementById("cfgOBackdrop").value=(OO.backdrop&&OO.backdrop.label)||"";
+    document.getElementById("cfgOPodLabel").value=(OO.podium&&OO.podium.label)||"";
+    document.getElementById("cfgOPodCount").value=(OO.podium&&OO.podium.count)||5;
+    document.getElementById("cfgOPhoto").value=(OO.photo&&OO.photo.label)||"";
+    document.getElementById("cfgOMediaLabel").value=(OO.media&&OO.media.label)||"";
+    document.getElementById("cfgOMediaRows").value=(OO.media&&OO.media.rows)||2;
+    document.getElementById("cfgOMediaCols").value=(OO.media&&OO.media.cols)||8;
+    document.getElementById("cfgOGuestLabel").value=(OO.guest&&OO.guest.label)||"";
+    document.getElementById("cfgOGuestRows").value=(OO.guest&&OO.guest.rows)||3;
+    document.getElementById("cfgOGuestCols").value=(OO.guest&&OO.guest.cols)||8;
+    var bdOn=!((OO.backdrop&&OO.backdrop.enabled===false));
+    var podOn=!((OO.podium&&OO.podium.enabled===false));
+    var mOn=!((OO.media&&OO.media.enabled===false));
+    var gOn=!((OO.guest&&OO.guest.enabled===false));
+    document.getElementById("cfgOBackdropOn").checked=bdOn;
+    document.getElementById("cfgOPodOn").checked=podOn;
+    document.getElementById("cfgOMediaOn").checked=mOn;
+    document.getElementById("cfgOGuestOn").checked=gOn;
+    document.getElementById("cfgOBackdrop").disabled=!bdOn;
+    ["cfgOPodLabel","cfgOPodCount"].forEach(function(id){ var el=document.getElementById(id); if(el) el.disabled=!podOn; });
+    ["cfgOMediaLabel","cfgOMediaRows","cfgOMediaCols"].forEach(function(id){ var el=document.getElementById(id); if(el) el.disabled=!mOn; });
+    ["cfgOGuestLabel","cfgOGuestRows","cfgOGuestCols"].forEach(function(id){ var el=document.getElementById(id); if(el) el.disabled=!gOn; });
+    document.getElementById("scenarioName").value=state.activeScenario||"";
+  }
+  // 完整同步：欄位值 + 重建所有側欄列表（增刪項目／切換模式／匯入時呼叫）
+  function syncConfigPanel(){
+    syncConfigValues();
+    var bs=document.getElementById("btnScenario"); if(bs) bs.textContent="場景："+(state.activeScenario||"預設");
+    var C=state.config;
+    var at=document.getElementById("autoTable");
+    if(at){ var ts=(C.banquet&&C.banquet.tables)||[]; at.innerHTML=ts.map(function(t){ return '<option value="'+esc(t.id)+'">'+esc(t.label||"圓桌")+(t.isMain?"（主桌）":"")+'</option>'; }).join(""); }
+    renderTableList();
+    renderExitList();
+    renderScreenList();
+    var sel=document.getElementById("scenarioSel");
+    sel.innerHTML=Object.keys(state.scenarios).map(function(k){ return '<option value="'+esc(k)+'"'+(k===state.activeScenario?" selected":"")+'>'+esc(k)+'</option>'; }).join("");
+    renderStageList();
+    renderFacList();
+  }
+  function findFac(id){
+    var arr=(state.config.outdoor&&state.config.outdoor.facilities)||[];
+    for(var i=0;i<arr.length;i++){ if(arr[i].id===id) return arr[i]; }
+    return null;
+  }
+  function renderFacList(){
+    var O=state.config.outdoor; if(!O) O=state.config.outdoor={ backdrop:{label:"",enabled:true}, facilities:[], podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8,enabled:true}, guest:{label:"嘉賓區",rows:3,cols:8,enabled:true} };
+    if(!O.facilities || !O.facilities.length) O.facilities=[{id:"f0",label:"投影屏幕",kind:"screen",enabled:true}];
+    var html=O.facilities.map(function(f){
+      var fx0=(typeof f.x==="number"? f.x : 120), fy0=(typeof f.y==="number"? f.y : 124);
+      return '<div class="fac-item" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0;padding:8px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;">'
+        +'<label class="chk" style="margin:0;"><input type="checkbox" data-fon="'+esc(f.id)+'"'+(f.enabled!==false?' checked':'')+'> 設</label>'
+        +'<input type="text" data-flabel="'+esc(f.id)+'" value="'+esc(f.label||"")+'" placeholder="設施名稱" style="flex:1;min-width:120px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;">'
+        +'<select data-fkind="'+esc(f.id)+'" style="border:1px solid var(--line);border-radius:8px;padding:6px 8px;"><option value="screen"'+(f.kind==="screen"?" selected":"")+'>投影屏幕（黑色屏條）</option><option value="box"'+(f.kind!=="screen"?" selected":"")+'>標籤框（淺色方框）</option></select>'
+        +'<button type="button" class="ghost" data-fpos="'+esc(f.id)+'" title="設 X/Y 位置、寬高、字體大小（亦可直接於圖上拖曳）">位置 '+fx0+','+fy0+'</button>'
+        +'<button class="ghost" data-fdel="'+esc(f.id)+'" type="button">－</button>'
+        +'</div>';
+    }).join("");
+    var wrap=document.getElementById("outFacList"); if(wrap) wrap.innerHTML=html;
+    if(wrap){
+      wrap.querySelectorAll("input[data-fon]").forEach(function(cb){
+        cb.onchange=function(){ var f=findFac(cb.getAttribute("data-fon")); if(f){ f.enabled=cb.checked; save(); render(); } };
+      });
+      wrap.querySelectorAll("input[data-flabel]").forEach(function(inp){
+        inp.oninput=function(){ var f=findFac(inp.getAttribute("data-flabel")); if(f){ f.label=inp.value; save(); render(); } };
+      });
+      wrap.querySelectorAll("select[data-fkind]").forEach(function(sel){
+        sel.onchange=function(){ var f=findFac(sel.getAttribute("data-fkind")); if(f){ f.kind=sel.value; save(); render(); } };
+      });
+      wrap.querySelectorAll("button[data-fpos]").forEach(function(b){
+        b.onclick=function(){ var f=findFac(b.getAttribute("data-fpos")); if(f){ openFacPop(document.querySelector('[data-ofac="'+esc(f.id)+'"]')||document.getElementById("stage"), f.id); } };
+      });
+      wrap.querySelectorAll("button[data-fdel]").forEach(function(b){
+        b.onclick=function(){ var id=b.getAttribute("data-fdel"); state.config.outdoor.facilities=state.config.outdoor.facilities.filter(function(x){ return x.id!==id; }); save(); render(); syncConfigPanel(); };
+      });
+    }
+  }
+  function renderStageList(){
+    var arr=state.scenarios[state.activeScenario]||[];
+    document.getElementById("stageList").innerHTML=arr.map(function(nm,i){
+      return '<div class="sl-item"><span>主位'+(i+1)+'</span>'
+        +'<input data-i="'+i+'" value="'+esc(nm)+'">'
+        +'<button class="ghost sl-del" data-del="'+i+'">－</button></div>';
+    }).join("");
+    document.getElementById("stageList").querySelectorAll("input").forEach(function(inp){
+      inp.oninput=function(e){ arr[+inp.getAttribute("data-i")]=e.target.value; save(); render(); };
+    });
+    document.getElementById("stageList").querySelectorAll(".sl-del").forEach(function(b){
+      b.onclick=function(){
+        if(arr.length<=1) return;
+        arr.splice(+b.getAttribute("data-del"),1); save(); render(); renderStageList();
+      };
+    });
+  }
+
+  function bindConfig(){
+    document.getElementById("cfgActivity").addEventListener("input", function(e){ state.config.activity=e.target.value; save(); render(); });
+    document.getElementById("cfgVenue").addEventListener("input", function(e){ state.config.venue=e.target.value; save(); render(); });
+    document.getElementById("cfgShowTitle").addEventListener("change", function(e){ state.config.showTitle=e.target.checked; save(); render(); });
+    document.getElementById("cfgRows").addEventListener("input", function(e){
+      state.config.rows=clamp(e.target.value,1,26); rebuildSeats(state); e.target.value=state.config.rows; save(); render();
+    });
+    document.getElementById("cfgCols").addEventListener("input", function(e){
+      state.config.cols=clamp(e.target.value,1,30);
+      if(state.config.aisleAfter>state.config.cols) state.config.aisleAfter=state.config.cols;
+      rebuildSeats(state); e.target.value=state.config.cols; save(); render();
+    });
+    document.getElementById("cfgAisle").addEventListener("input", function(e){
+      state.config.aisleAfter=clamp(e.target.value,0,state.config.cols); e.target.value=state.config.aisleAfter; save(); render();
+    });
+    document.getElementById("cfgAisleRows").addEventListener("input", function(e){
+      state.config.aisleRows=clamp(e.target.value,0,state.config.rows); e.target.value=state.config.aisleRows; save(); render();
+    });
+    document.getElementById("cfgScreen").addEventListener("change", function(e){ state.config.showScreen=e.target.checked; save(); render(); });
+    document.getElementById("cfgStage").addEventListener("change", function(e){ state.config.showStage=e.target.checked; save(); render(); });
+    document.getElementById("cfgPark").addEventListener("change", function(e){ state.config.parking.enabled=e.target.checked; save(); render(); });
+    document.getElementById("cfgParkLabel").addEventListener("input", function(e){ state.config.parking.label=e.target.value; save(); render(); });
+    document.getElementById("cfgParkSub").addEventListener("input", function(e){ state.config.parking.sub=e.target.value; save(); render(); });
+
+    document.getElementById("scenarioSel").addEventListener("change", function(e){
+      state.activeScenario=e.target.value; save(); render(); renderStageList();
+    });
+    document.getElementById("scenarioName").addEventListener("input", function(e){
+      var neu=e.target.value.trim(); var old=state.activeScenario;
+      if(!neu||neu===old) return;
+      if(state.scenarios[neu]){ alert("場景名稱已存在"); e.target.value=old; return; }
+      var v=state.scenarios[old]; delete state.scenarios[old]; state.scenarios[neu]=v; state.activeScenario=neu;
+      save(); render(); syncConfigPanel();
+    });
+    document.getElementById("addScenario").addEventListener("click", function(){
+      var n=Object.keys(state.scenarios).length+1, name="場景"+n;
+      while(state.scenarios[name]) name="場景"+(++n);
+      state.scenarios[name]=[""]; state.activeScenario=name; save(); render(); syncConfigPanel();
+    });
+    document.getElementById("delScenario").addEventListener("click", function(){
+      var keys=Object.keys(state.scenarios);
+      if(keys.length<=1){ alert("至少需保留一個場景"); return; }
+      delete state.scenarios[state.activeScenario];
+      state.activeScenario=Object.keys(state.scenarios)[0]; save(); render(); syncConfigPanel();
+    });
+    document.getElementById("addStagePos").addEventListener("click", function(){
+      state.scenarios[state.activeScenario].push(""); save(); render(); renderStageList();
+    });
+    document.getElementById("cfgShowExits").addEventListener("change", function(e){ state.config.showExits=e.target.checked; save(); render(); });
+    document.getElementById("addExit").addEventListener("click", addExit);
+    document.getElementById("addScreenTop").addEventListener("click", function(){ addScreen("top"); });
+    document.getElementById("addScreenLeft").addEventListener("click", function(){ addScreen("left"); });
+    document.getElementById("addScreenRight").addEventListener("click", function(){ addScreen("right"); });
+    document.getElementById("cfgMode").addEventListener("change", function(e){
+      state.config.mode=e.target.value;
+      if(state.config.mode==="banquet" && (!state.config.banquet.tables || !state.config.banquet.tables.length)){ seedTables(); }
+      if(state.config.mode==="meeting" && (!state.config.meeting || !state.config.meeting.table)){ seedMeeting(); }
+      if(state.config.mode==="outdoor"){ seedOutdoor(); }
+      save(); render(); syncConfigPanel();
+    });
+    document.getElementById("cfgMTable").addEventListener("input", function(e){ var t=state.config.meeting.table; if(t){ t.label=e.target.value; save(); render(); } });
+    document.getElementById("cfgMPL").addEventListener("input", function(e){ var t=state.config.meeting.table; if(t){ t.perLong=clamp(e.target.value,1,12); e.target.value=t.perLong; save(); render(); } });
+    document.getElementById("cfgMPS").addEventListener("input", function(e){ var t=state.config.meeting.table; if(t){ t.perShort=clamp(e.target.value,1,4); e.target.value=t.perShort; save(); render(); } });
+    document.getElementById("cfgMW").addEventListener("input", function(e){ var t=state.config.meeting.table; if(t){ t.w=clamp(e.target.value,200,900); e.target.value=t.w; save(); render(); } });
+    document.getElementById("cfgMH").addEventListener("input", function(e){ var t=state.config.meeting.table; if(t){ t.h=clamp(e.target.value,120,400); e.target.value=t.h; save(); render(); } });
+    document.getElementById("addTable").addEventListener("click", addTable);
+    // 戶外發佈設定
+    function bindOutdoorInput(id, fn){
+      document.getElementById(id).addEventListener("input", function(e){
+        var O=state.config.outdoor;
+        if(!O) O=state.config.outdoor={ backdrop:{label:"",enabled:true}, facilities:[{id:"f0",label:"投影屏幕",kind:"screen",enabled:true,x:120,y:124,w:760,h:42,fs:15}], podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8}, guest:{label:"嘉賓區",rows:3,cols:8} };
+        fn(O, e.target.value); save(); render();
+      });
+    }
+    bindOutdoorInput("cfgOBackdrop", function(O,v){ O.backdrop.label=v; });
+    bindOutdoorInput("cfgOPodLabel", function(O,v){ O.podium.label=v; });
+    bindOutdoorInput("cfgOPodCount", function(O,v){ O.podium.count=clamp(v,1,9); });
+    bindOutdoorInput("cfgOPhoto", function(O,v){ O.photo.label=v; });
+    bindOutdoorInput("cfgOMediaLabel", function(O,v){ O.media.label=v; });
+    bindOutdoorInput("cfgOMediaRows", function(O,v){ O.media.rows=clamp(v,1,8); });
+    bindOutdoorInput("cfgOMediaCols", function(O,v){ O.media.cols=clamp(v,1,16); });
+    bindOutdoorInput("cfgOGuestLabel", function(O,v){ O.guest.label=v; });
+    bindOutdoorInput("cfgOGuestRows", function(O,v){ O.guest.rows=clamp(v,1,8); });
+    bindOutdoorInput("cfgOGuestCols", function(O,v){ O.guest.cols=clamp(v,1,16); });
+    // 傳媒區／嘉賓區「有／沒有」開關
+    function bindOutdoorToggle(id, fn){
+      document.getElementById(id).addEventListener("change", function(e){
+        var O=state.config.outdoor;
+        if(!O) O=state.config.outdoor={ backdrop:{label:"",enabled:true}, facilities:[{id:"f0",label:"投影屏幕",kind:"screen",enabled:true,x:120,y:124,w:760,h:42,fs:15}], podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8,enabled:true}, guest:{label:"嘉賓區",rows:3,cols:8,enabled:true} };
+        fn(O, e.target.checked); save(); render(); syncConfigValues();
+      });
+    }
+    bindOutdoorToggle("cfgOBackdropOn", function(O,v){ if(!O.backdrop) O.backdrop={label:""}; O.backdrop.enabled=v; });
+    bindOutdoorToggle("cfgOPodOn", function(O,v){ if(!O.podium) O.podium={label:"發佈台",count:5}; O.podium.enabled=v; });
+    bindOutdoorToggle("cfgOMediaOn", function(O,v){ if(!O.media) O.media={label:"傳媒區",rows:2,cols:8}; O.media.enabled=v; });
+    bindOutdoorToggle("cfgOGuestOn", function(O,v){ if(!O.guest) O.guest={label:"嘉賓區",rows:3,cols:8}; O.guest.enabled=v; });
+    document.getElementById("btnAddFac").addEventListener("click", function(){
+      var O=state.config.outdoor; if(!O) O=state.config.outdoor={ backdrop:{label:"",enabled:true}, podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8,enabled:true}, guest:{label:"嘉賓區",rows:3,cols:8,enabled:true} };
+      if(!O.facilities||!O.facilities.length) O.facilities=[{id:"f0",label:"投影屏幕",kind:"screen",enabled:true}];
+      O.facilities.push({ id:"f"+Date.now(), label:"設施"+(O.facilities.length+1), kind:"box", enabled:true, x:120, y:124+(O.facilities.length*54), w:760, h:42, fs:15 });
+      save(); render(); syncConfigPanel();
+    });
+  }
+  function seedOutdoor(){
+    if(!state.config.outdoor) state.config.outdoor={ backdrop:{label:"",enabled:true}, facilities:[{id:"f0",label:"投影屏幕",kind:"screen",enabled:true,x:120,y:124,w:760,h:42,fs:15}], podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8,enabled:true}, guest:{label:"嘉賓區",rows:3,cols:8,enabled:true} };
+    if(!state.config.outdoor.facilities || !state.config.outdoor.facilities.length) state.config.outdoor.facilities=[{id:"f0",label:"投影屏幕",kind:"screen",enabled:true}];
+  if(typeof state.config.showTitle==="undefined") state.config.showTitle=true;
+    if(!state.seatsPodium) state.seatsPodium={};
+    if(!state.seatsMedia) state.seatsMedia={};
+    if(!state.seatsGuest) state.seatsGuest={};
+  }
+
+  /* ---------- 公開方法 ---------- */
+  window.switchScenarioUI=function(){
+    var keys=Object.keys(state.scenarios);
+    if(keys.length===0){ state.scenarios={"場景一":[""]}; keys=["場景一"]; }
+    var idx=keys.indexOf(state.activeScenario); if(idx<0) idx=0;
+    state.activeScenario=keys[(idx+1)%keys.length];
+    save(); render(); renderStageList();
+    var det=document.querySelector('details.cfg'); if(det) det.open=true;
+    var scn=document.querySelector('.scn'); if(scn) scn.scrollIntoView({behavior:'smooth', block:'nearest'});
+  };
+  window.togglePark=function(){
+    state.config.parking.enabled=!state.config.parking.enabled; save(); render();
+  };
+  window.resetAll=function(){
+    if(!confirm("確定清空所有編輯、還原為預設範本？")) return;
+    try{ localStorage.removeItem(KEY); }catch(e){}
+    state=defaultState(); rebuildSeats(state); closePop(); lastAuto={keys:[],backup:{}}; save(); render(); syncConfigPanel();
+  };
+
+  function downloadBlob(blob, name){
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement("a");
+    a.href=url; a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 100);
+  }
+  function baseName(){
+    var a=(state.config.activity||"座位圖").replace(/[\\/:*?"<>|]/g,"").trim();
+    return a||"座位圖";
+  }
+  window.exportSVG=function(){
+    var s=document.getElementById("stage").cloneNode(true);
+    s.setAttribute("xmlns","http://www.w3.org/2000/svg");
+    var data=new XMLSerializer().serializeToString(s);
+    downloadBlob(new Blob([data],{type:"image/svg+xml;charset=utf-8"}), baseName()+".svg");
+  };
+  window.exportPNG=function(){
+    var svgEl=document.getElementById("stage");
+    var xml=new XMLSerializer().serializeToString(svgEl);
+    var src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml);
+    var img=new Image();
+    img.onload=function(){
+      var scale=2, W=1000, H=VIEW_H;
+      var cv=document.createElement("canvas"); cv.width=W*scale; cv.height=H*scale;
+      var ctx=cv.getContext("2d");
+      ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,cv.width,cv.height);
+      ctx.drawImage(img,0,0,cv.width,cv.height);
+      cv.toBlob(function(b){ if(b) downloadBlob(b, baseName()+".png"); });
+    };
+    img.src=src;
+  };
+  window.exportJSON=function(){
+    downloadBlob(new Blob([JSON.stringify(state,null,2)],{type:"application/json"}), baseName()+"_設定.json");
+  };
+  // CSV 匯出：欄位 桌名／座位／姓名／狀態；列出全部座位（完整座位表）。grid 模式桌名留空、座位=A1 等；banquet 模式桌名=圓桌名、座位=主位/第N位。
+  window.exportCSV=function(){
+    var C=state.config;
+    var stLabel={}; (C.statuses||[]).forEach(function(s){ stLabel[s.key]=s.label; });
+    var rows=[["桌名","座位","姓名","狀態"]];
+    if(C.mode==="banquet"){
+      var tables=(C.banquet&&C.banquet.tables)||[];
+      tables.forEach(function(t){
+        for(var i=0;i<t.seats;i++){
+          var key=t.id+"_"+i;
+          var seat=state.seatsBanquet[key]||{status:"empty",name:""};
+          rows.push([t.label||"圓桌", (i===0?"主位":("第"+fmtNum(i+1)+"位")), seat.name||"", stLabel[seat.status]||seat.status||""]);
+        }
+      });
+    } else if(C.mode==="meeting"){
+      var mt=(C.meeting&&C.meeting.table)||{};
+      var mseats=meetingSeats(mt);
+      mseats.forEach(function(s){
+        var seat=state.seatsMeeting[s.idx]||{status:"empty",name:""};
+        rows.push([mt.label||"會議桌", (s.host?"主位":("第"+s.lbl+"位")), seat.name||"", stLabel[seat.status]||seat.status||""]);
+      });
+    } else if(C.mode==="grid"){
+      var labels=rowLabels(C.rows);
+      for(var r=0;r<C.rows;r++){
+        for(var c=0;c<C.cols;c++){
+          var id=labels[r]+(c+1);
+          var seat=state.seats[id]||{status:"empty",name:""};
+          rows.push(["", id, seat.name||"", stLabel[seat.status]||seat.status||""]);
+        }
+      }
+    } else {
+      // 戶外發佈：發佈台主位 → 傳媒區 → 嘉賓區
+      var O=C.outdoor||{};
+      var pod=O.podium||{label:"發佈台",count:5,enabled:true};
+      if(pod.enabled!==false){
+        var pn=clamp(pod.count||5,1,9);
+        for(var pi=0;pi<pn;pi++){
+          var pseat=state.seatsPodium["P"+pi]||{status:"empty",name:""};
+          rows.push([(pod.label||"發佈台"), "發佈位"+(pi+1), pseat.name||"", stLabel[pseat.status]||pseat.status||""]);
+        }
+      }
+      var facs=(O.facilities||[]).filter(function(f){ return f.enabled!==false; });
+      for(var fci=0; fci<facs.length; fci++){ var F=facs[fci]; rows.push([(F.label||"設施"), (F.kind==="screen"?"投影屏幕":"設施裝置"), "X="+(F.x==null?120:F.x)+" Y="+(F.y==null?124:F.y), "寬"+(F.w==null?760:F.w)+"×高"+(F.h==null?42:F.h)+" 字"+(F.fs==null?15:F.fs)]); }
+      var m=O.media||{rows:2,cols:8,enabled:true}, mr=clamp(m.rows||2,1,8), mc2=clamp(m.cols||8,1,16);
+      if(m.enabled!==false){
+        for(var mi=0;mi<mr*mc2;mi++){
+          var mseat=state.seatsMedia["M"+mi]||{status:"empty",name:""};
+          rows.push([(m.label||"傳媒區"), "座位"+(mi+1), mseat.name||"", stLabel[mseat.status]||mseat.status||""]);
+        }
+      }
+      var g=O.guest||{rows:3,cols:8,enabled:true}, gr=clamp(g.rows||3,1,8), gc2=clamp(g.cols||8,1,16);
+      if(g.enabled!==false){
+        for(var gi=0;gi<gr*gc2;gi++){
+          var gseat=state.seatsGuest["G"+gi]||{status:"empty",name:""};
+          rows.push([(g.label||"嘉賓區"), "座位"+(gi+1), gseat.name||"", stLabel[gseat.status]||gseat.status||""]);
+        }
+      }
+    }
+    var csv=rows.map(function(row){
+      return row.map(function(cell){
+        var s=String(cell==null?"":cell);
+        if(/[",\n\r]/.test(s)) s='"'+s.replace(/"/g,'""')+'"';
+        return s;
+      }).join(",");
+    }).join("\r\n");
+    downloadBlob(new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"}), baseName()+".csv");
+  };
+  window.importJSON=function(ev){
+    var f=ev.target.files&&ev.target.files[0]; if(!f) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var obj=JSON.parse(reader.result);
+        if(!obj.config||!obj.seats||!obj.scenarios){ alert("檔案格式不正確。"); return; }
+        state=obj;
+        if(!state.activeScenario||!state.scenarios[state.activeScenario]) state.activeScenario=Object.keys(state.scenarios)[0];
+        if(!state.seatsBanquet) state.seatsBanquet={};
+        if(!state.config.mode) state.config.mode="grid";
+        if(!state.config.banquet) state.config.banquet={tables:[]};
+        if(!state.seatsMeeting) state.seatsMeeting={};
+        if(!state.config.meeting) state.config.meeting={table:{label:"會議主桌",x:500,y:430,w:520,h:200,perLong:6,perShort:1}};
+        if(!state.config.outdoor) state.config.outdoor={ backdrop:{label:"",enabled:true}, podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8,enabled:true}, guest:{label:"嘉賓區",rows:3,cols:8,enabled:true} };
+  if(typeof state.config.showTitle==="undefined") state.config.showTitle=true;
+        if(!state.seatsPodium) state.seatsPodium={};
+        if(!state.seatsMedia) state.seatsMedia={};
+        if(!state.seatsGuest) state.seatsGuest={};
+        rebuildSeats(state); closePop(); save(); render(); syncConfigPanel();
+      }catch(err){ alert("讀取失敗："+err.message); }
+    };
+    reader.readAsText(f);
+    ev.target.value="";
+  };
+
+  /* ---------- 名單自動排位（禮賓規則） ---------- */
+  var autoMode="single", autoDir="right";
+  var lastAuto={keys:[], backup:{}};
+
+  function parseNames(txt){
+    var out=[];
+    String(txt==null?"":txt).split(/\r?\n/).forEach(function(line){
+      line=line.trim(); if(!line) return;
+      line.split(/[，,、;；]/).forEach(function(p){ p=p.trim(); if(p) out.push(p); });
+    });
+    return out;
+  }
+  // 由中央向兩側的「列」優先序（0-based 列索引）；mode: single/dual, dir: right/left
+  function fanoutColumns(C, mode, dir){
+    var A=C.aisleAfter, N=C.cols, rightBlock=[], leftBlock=[];
+    if(mode==="dual"){
+      for(var i=A+1;i<N;i++) rightBlock.push(i);   // 右1 = col A+2 … 向右
+      for(var j=A-2;j>=0;j--) leftBlock.push(j);    // 左1 = col A-1 … 向左
+    } else {
+      for(var i=A;i<N;i++) rightBlock.push(i);      // 右1 = col A+1 …
+      for(var j=A-1;j>=0;j--) leftBlock.push(j);    // 左1 = col A …
+    }
+    var seq=[], ri=0, li=0;
+    if(dir==="right"){
+      while(ri<rightBlock.length||li<leftBlock.length){
+        if(ri<rightBlock.length) seq.push(rightBlock[ri++]);
+        if(li<leftBlock.length) seq.push(leftBlock[li++]);
+      }
+    } else {
+      while(ri<rightBlock.length||li<leftBlock.length){
+        if(li<leftBlock.length) seq.push(leftBlock[li++]);
+        if(ri<rightBlock.length) seq.push(rightBlock[ri++]);
+      }
+    }
+    return seq;
+  }
+  // 依優先序產生座位 id 清單（前排到後排）
+  function computeSlots(){
+    var C=state.config, cols=fanoutColumns(C, autoMode, autoDir), labels=rowLabels(C.rows), slots=[];
+    for(var r=0;r<C.rows;r++){
+      for(var ci=0;ci<cols.length;ci++){ slots.push(labels[r]+(cols[ci]+1)); }
+    }
+    return slots;
+  }
+  function updatePreview(){
+    var names=parseNames(document.getElementById("nameList").value);
+    var slots=computeSlots();
+    var rows=[]; var n=Math.min(names.length, slots.length, 16);
+    for(var i=0;i<n;i++){ rows.push((i+1)+". "+esc(names[i])+" → "+slots[i]); }
+    var extra="";
+    if(names.length===0) rows=["（輸入名單後顯示排位順序預覽）"];
+    else if(names.length>slots.length) extra='<br>（名單多於座位，後 '+(names.length-slots.length)+' 位未排入）';
+    document.getElementById("autoPreview").innerHTML=rows.join("<br>")+extra;
+  }
+  function setAutoMode(m){
+    autoMode=m;
+    document.getElementById("modeSingle").classList.toggle("active", m==="single");
+    document.getElementById("modeDual").classList.toggle("active", m==="dual");
+    updatePreview();
+  }
+  function setAutoDir(d){
+    autoDir=d;
+    document.getElementById("dirRight").classList.toggle("active", d==="right");
+    document.getElementById("dirLeft").classList.toggle("active", d==="left");
+    updatePreview();
+  }
+  function autoAssign(){
+    if(state.config.mode==="banquet"){ assignBanquet(); return; }
+    if(state.config.mode==="meeting"){ assignMeeting(); return; }
+    if(state.config.mode==="outdoor"){ alert("戶外發佈模式為分區站位（發佈台／傳媒區／嘉賓區），不支援名單自動排位，請在各站位直接點擊填寫姓名。"); return; }
+    var names=parseNames(document.getElementById("nameList").value);
+    if(!names.length){ alert("請先輸入名單（每行一位，或用 、或 ，分隔）。"); return; }
+    var slots=computeSlots(), onlyEmpty=document.getElementById("autoEmptyOnly").checked;
+    var placed=0, overflow=0, skipped=0;
+    lastAuto={keys:[], backup:{}};
+    for(var i=0;i<names.length;i++){
+      if(i>=slots.length){ overflow++; continue; }
+      var id=slots[i], seat=state.seats[id];
+      if(!seat) continue;
+      if(onlyEmpty && seat.name){ skipped++; continue; }
+      lastAuto.backup[id]={status:seat.status, name:seat.name};
+      lastAuto.keys.push(id);
+      seat.name=names[i]; seat.status="confirmed";
+      placed++;
+    }
+    save(); render();
+    var msg="已自動排入 "+placed+" 位。";
+    if(overflow) msg+=" 名單尚餘 "+overflow+" 位超出座位容量，未排入。";
+    if(skipped) msg+="（略過 "+skipped+" 個已有姓名的座位）";
+    document.getElementById("autoResult").textContent=msg;
+  }
+  function clearAuto(){
+    if(!lastAuto || !lastAuto.keys.length){ document.getElementById("autoResult").textContent="尚無自動排位可清除。"; return; }
+    var store=(state.config.mode==="banquet")? state.seatsBanquet : (state.config.mode==="meeting")? state.seatsMeeting : state.seats;
+    lastAuto.keys.forEach(function(id){
+      var b=lastAuto.backup[id];
+      store[id]= b? {status:b.status, name:b.name} : {status:"empty", name:""};
+    });
+    lastAuto={keys:[], backup:{}};
+    save(); render();
+    document.getElementById("autoResult").textContent="已清除剛排的名單，復原原有座位。";
+  }
+  window.setAutoMode=setAutoMode; window.setAutoDir=setAutoDir;
+  window.autoAssign=autoAssign; window.clearAuto=clearAuto; window.updatePreview=updatePreview;
+
+  /* ============================================================
+     座位圖記錄庫（參考用）：儲存／回看／套用／匯出
+     與「專案管理系統」共用同一 localStorage 鍵 wb_seat_records_v1
+     ============================================================ */
+  var REC_KEY="wb_seat_records_v1";
+  var inPreview=false, prevState=null;
+  function recLoad(){ try{ var r=localStorage.getItem(REC_KEY); return r? JSON.parse(r): []; }catch(e){ return []; } }
+  function recSave(arr){ try{ localStorage.setItem(REC_KEY, JSON.stringify(arr)); }catch(e){ alert("記錄庫儲存失敗："+e.message); } }
+  function recClone(o){ return JSON.parse(JSON.stringify(o)); }
+  function modeLabel(m){ return m==="banquet"?"宴請圓桌":(m==="meeting"?"會議長桌":(m==="outdoor"?"戶外發佈":"座談會行列")); }
+  function sanitizeName(v){ return String(v==null?"":v).replace(/[\\/:*?"<>|\r\n]+/g,"_").replace(/\s+/g,"_").slice(0,40); }
+  function normalizeSnap(snap){
+    snap=snap||{};
+    var s={ config:snap.config||{}, seats:snap.seats||{}, seatsBanquet:snap.seatsBanquet||{}, seatsMeeting:snap.seatsMeeting||{}, seatsPodium:snap.seatsPodium||{}, seatsMedia:snap.seatsMedia||{}, seatsGuest:snap.seatsGuest||{}, seatsStaff:snap.seatsStaff||{}, stageInfo:snap.stageInfo||{}, scenarios:snap.scenarios||{"場景一":[""]}, activeScenario:snap.activeScenario };
+    var C=s.config;
+    if(!C.mode) C.mode="grid";
+    if(!C.banquet) C.banquet={tables:[]};
+    if(!C.meeting) C.meeting={table:{label:"會議主桌",x:500,y:430,w:520,h:200,perLong:6,perShort:1}};
+    if(!C.outdoor) C.outdoor={ backdrop:{label:"",enabled:true}, facilities:[{id:"f0",label:"投影屏幕",kind:"screen",enabled:true,x:120,y:124,w:760,h:42,fs:15}], podium:{label:"發佈台",count:5,enabled:true}, photo:{label:"攝影區"}, media:{label:"傳媒區",rows:2,cols:8,enabled:true}, guest:{label:"嘉賓區",rows:3,cols:8,enabled:true} };
+    // 舊版設施（含 pos:band/left/right）遷移至自由定位模型（x/y/w/h/fs）
+    if(C.outdoor && C.outdoor.facilities){ C.outdoor.facilities.forEach(function(f, idx){ if(typeof f.x!=="number") f.x=120; if(typeof f.y!=="number") f.y=124+idx*54; if(typeof f.w!=="number") f.w=760; if(typeof f.h!=="number") f.h=42; if(typeof f.fs!=="number") f.fs=15; delete f.pos; }); }
+    if(!C.exits) C.exits=[];
+    if(!C.statuses) C.statuses=[];
+    if(!s.activeScenario || !s.scenarios[s.activeScenario]) s.activeScenario=Object.keys(s.scenarios)[0];
+    return s;
+  }
+  function captureSnap(){
+    return {
+      config:recClone(state.config), seats:recClone(state.seats),
+      seatsBanquet:recClone(state.seatsBanquet), seatsMeeting:recClone(state.seatsMeeting),
+      seatsPodium:recClone(state.seatsPodium), seatsMedia:recClone(state.seatsMedia), seatsGuest:recClone(state.seatsGuest), seatsStaff:recClone(state.seatsStaff), stageInfo:recClone(state.stageInfo),
+      scenarios:recClone(state.scenarios), activeScenario:state.activeScenario
+    };
+  }
+  function saveRecord(){
+    var name=document.getElementById("recName").value.trim();
+    if(!name) name=(state.config.activity||"座位圖")+(state.config.venue?(" · "+state.config.venue):"");
+    var rec={
+      id:"r"+Date.now()+"_"+Math.floor(Math.random()*1000),
+      name:name,
+      eventDate:document.getElementById("recDate").value.trim(),
+      venue:(state.config.venue||""),
+      mode:(state.config.mode||"grid"),
+      notes:document.getElementById("recNotes").value.trim(),
+      createdAt:new Date().toISOString(),
+      snapshot:captureSnap()
+    };
+    var arr=recLoad(); arr.unshift(rec); recSave(arr); renderRecList();
+    document.getElementById("recName").value=""; document.getElementById("recNotes").value="";
+    var msg=document.getElementById("recMsg"); if(msg) msg.textContent="已儲存記錄：「"+rec.name+"」。";
+  }
+  function applyRecord(id){
+    var arr=recLoad(), rec=null;
+    for(var i=0;i<arr.length;i++){ if(arr[i].id===id){ rec=arr[i]; break; } }
+    if(!rec) return;
+    if(!confirm("將「"+rec.name+"」的排位與場地設置套用為目前場地底稿？（目前未儲存的編輯會被覆蓋）")) return;
+    state=normalizeSnap(rec.snapshot); rebuildSeats(state);
+    inPreview=false; prevState=null;
+    save(); render(); syncConfigPanel();
+    var msg=document.getElementById("recMsg"); if(msg) msg.textContent="已套用記錄：「"+rec.name+"」為目前場地底稿。";
+  }
+  function previewRecord(id){
+    var arr=recLoad(), rec=null;
+    for(var i=0;i<arr.length;i++){ if(arr[i].id===id){ rec=arr[i]; break; } }
+    if(!rec) return;
+    prevState=recClone(state);
+    state=normalizeSnap(rec.snapshot); inPreview=true; render(); showPreviewBar(rec);
+  }
+  function exitPreview(apply){
+    if(apply){
+      inPreview=false; prevState=null; rebuildSeats(state);
+      save(); render(); syncConfigPanel();
+      var msg=document.getElementById("recMsg"); if(msg) msg.textContent="已套用預覽中的記錄為目前場地底稿。";
+    } else {
+      state=prevState; prevState=null; inPreview=false; render(); syncConfigPanel();
+      var msg=document.getElementById("recMsg"); if(msg) msg.textContent="已返回目前的場地編輯。";
+    }
+    hidePreviewBar();
+  }
+  function showPreviewBar(rec){
+    var box=document.querySelector(".svgbox"); if(!box) return;
+    var bar=document.getElementById("previewBar");
+    if(!bar){ bar=document.createElement("div"); bar.id="previewBar"; bar.className="preview-bar"; box.appendChild(bar); }
+    bar.innerHTML='<span class="pv-tag">預覽記錄：'+esc(rec.name)+(rec.venue?('（'+esc(rec.venue)+'）'):'')+'</span>'
+      +'<span class="pv-hint">僅供參考，編輯器尚未變更</span>'
+      +'<button type="button" class="primary" onclick="exitPreview(true)">套用此配置</button>'
+      +'<button type="button" class="ghost" onclick="exitPreview(false)">返回編輯</button>';
+    bar.style.display="flex";
+  }
+  function hidePreviewBar(){ var bar=document.getElementById("previewBar"); if(bar) bar.style.display="none"; }
+  function delRecord(id){
+    if(!confirm("確定刪除這筆記錄？")) return;
+    var arr=recLoad().filter(function(r){ return r.id!==id; });
+    recSave(arr); renderRecList();
+    var msg=document.getElementById("recMsg"); if(msg) msg.textContent="已刪除一筆記錄。";
+  }
+  function recToJSON(id){
+    var arr=recLoad(), rec=null;
+    for(var i=0;i<arr.length;i++){ if(arr[i].id===id){ rec=arr[i]; break; } }
+    if(!rec) return;
+    downloadBlob(new Blob([JSON.stringify(rec,null,2)],{type:"application/json"}), "座位記錄_"+sanitizeName(rec.name)+".json");
+  }
+  function exportAllRec(){
+    var arr=recLoad();
+    downloadBlob(new Blob([JSON.stringify(arr,null,2)],{type:"application/json"}), "座位記錄庫_全部.json");
+  }
+  function importAllRec(ev){
+    var f=ev.target.files&&ev.target.files[0]; if(!f) return;
+    var reader=new FileReader();
+    reader.onload=function(){
+      try{
+        var obj=JSON.parse(reader.result);
+        if(!Array.isArray(obj)){ alert("檔案格式不正確（應為記錄陣列）。"); return; }
+        var cur=recLoad(), map={};
+        cur.forEach(function(r){ map[r.id]=r; });
+        obj.forEach(function(r){ if(r&&r.id) map[r.id]=r; });
+        var merged=Object.keys(map).map(function(k){ return map[k]; });
+        recSave(merged); renderRecList();
+        var msg=document.getElementById("recMsg"); if(msg) msg.textContent="已匯入 "+obj.length+" 筆記錄（已合併至記錄庫）。";
+      }catch(err){ alert("讀取失敗："+err.message); }
+    };
+    reader.readAsText(f); ev.target.value="";
+  }
+  function renderRecList(){
+    var box=document.getElementById("recList"); if(!box) return;
+    var arr=recLoad();
+    if(!arr.length){ box.innerHTML='<p class="hint" style="margin:6px 0;">尚無記錄。排好一個場地後，按上方「＋ 儲存為記錄」即可留存；日後類似活動可回看參考排位與場地設置。</p>'; return; }
+    box.innerHTML=arr.map(function(r){
+      var meta=[];
+      if(r.eventDate) meta.push("日期 "+esc(r.eventDate));
+      if(r.venue) meta.push(esc(r.venue));
+      meta.push(modeLabel(r.mode||"grid"));
+      var btns=''
+        +'<button type="button" class="ghost" onclick="previewRecord(\''+r.id+'\')">預覽</button>'
+        +'<button type="button" class="ghost" onclick="applyRecord(\''+r.id+'\')">套用</button>'
+        +'<button type="button" class="ghost" onclick="recToJSON(\''+r.id+'\')">JSON</button>'
+        +'<button type="button" class="ghost" onclick="recToDocx(\''+r.id+'\')">DOCX</button>'
+        +'<button type="button" class="ghost danger" onclick="delRecord(\''+r.id+'\')">刪除</button>';
+      return '<div class="rec-card">'
+        +'<div class="rec-head"><b>'+esc(r.name)+'</b></div>'
+        +'<div class="rec-meta">'+meta.join("　·　")+(r.notes?('　｜　'+esc(r.notes)):'')+'</div>'
+        +'<div class="rec-acts">'+btns+'</div></div>';
+    }).join("");
+  }
+
+  /* ---- DOCX（純前端）：座位記錄匯出 ---- */
+  function recSeatRows(snap){
+    var C=snap.config, stLabel={}; (C.statuses||[]).forEach(function(s){ stLabel[s.key]=s.label; });
+    var rows=[];
+    if(C.mode==="banquet"){
+      var tables=(C.banquet&&C.banquet.tables)||[];
+      tables.forEach(function(t){
+        for(var i=0;i<t.seats;i++){ var key=t.id+"_"+i; var seat=(snap.seatsBanquet&&snap.seatsBanquet[key])||{status:"empty",name:""}; rows.push([(t.label||"圓桌")+"·"+(i===0?"主位":("第"+fmtNum(i+1)+"位")), seat.name||"", stLabel[seat.status]||seat.status||""]); }
+      });
+    } else if(C.mode==="meeting"){
+      var mt=(C.meeting&&C.meeting.table)||{}; var mseats=meetingSeats(mt);
+      mseats.forEach(function(s){ var seat=(snap.seatsMeeting&&snap.seatsMeeting[s.idx])||{status:"empty",name:""}; rows.push([(mt.label||"會議桌")+"·"+(s.host?"主位":("第"+s.lbl+"位")), seat.name||"", stLabel[seat.status]||seat.status||""]); });
+      if(C.staff && C.staff.enabled){ staffSeatList(C, "meeting").forEach(function(s){ var pl=s.side==="left"?"左側":(s.side==="right"?"右側":"後方"); var seat=(snap.seatsStaff&&snap.seatsStaff[s.key])||{status:"empty",name:""}; rows.push([((C.staff.label||"工作人員座位區")+"·"+pl+fmtNum(s.idx+1)), seat.name||"", stLabel[seat.status]||seat.status||""]); }); }
+    } else if(C.mode==="grid"){
+      var labels=rowLabels(C.rows);
+      for(var r=0;r<C.rows;r++){ for(var c=0;c<C.cols;c++){ var id=labels[r]+(c+1); var seat=(snap.seats&&snap.seats[id])||{status:"empty",name:""}; rows.push([id, seat.name||"", stLabel[seat.status]||seat.status||""]); } }
+      if(C.staff && C.staff.enabled){ staffSeatList(C, "grid").forEach(function(s){ var pl=s.side==="left"?"左側":(s.side==="right"?"右側":"後方"); var seat=(snap.seatsStaff&&snap.seatsStaff[s.key])||{status:"empty",name:""}; rows.push([((C.staff.label||"工作人員座位區")+"·"+pl+fmtNum(s.idx+1)), seat.name||"", stLabel[seat.status]||seat.status||""]); }); }
+    } else {
+      // 戶外發佈：發佈台主位 → 傳媒區 → 嘉賓區
+      var O=C.outdoor||{};
+      var pn=clamp((O.podium&&O.podium.count)||5,1,9);
+      for(var pi=0;pi<pn;pi++){ var pseat=(snap.seatsPodium&&snap.seatsPodium["P"+pi])||{status:"empty",name:""}; rows.push([((O.podium&&O.podium.label)||"發佈台")+"·發佈位"+(pi+1), pseat.name||"", stLabel[pseat.status]||pseat.status||""]); }
+      var facs2=(O.facilities||[]).filter(function(f){ return f.enabled!==false; });
+      for(var fc2=0; fc2<facs2.length; fc2++){ var F2=facs2[fc2]; var off="（X="+(F2.x==null?120:F2.x)+",Y="+(F2.y==null?124:F2.y)+"·"+(F2.w==null?760:F2.w)+"×"+(F2.h==null?42:F2.h)+"·字"+(F2.fs==null?15:F2.fs)+"）"; rows.push([((F2.label||"設施")+"（"+(F2.kind==="screen"?"投影屏幕":"設施裝置")+"）"+off), "", ""]); }
+      var m=O.media||{rows:2,cols:8,enabled:true}, mr=clamp(m.rows||2,1,8), mc3=clamp(m.cols||8,1,16);
+      if(m.enabled!==false){
+        for(var mi=0;mi<mr*mc3;mi++){ var mseat=(snap.seatsMedia&&snap.seatsMedia["M"+mi])||{status:"empty",name:""}; rows.push([((m.label||"傳媒區")+"·座位"+(mi+1)), mseat.name||"", stLabel[mseat.status]||mseat.status||""]); }
+      }
+      var g=O.guest||{rows:3,cols:8,enabled:true}, gr=clamp(g.rows||3,1,8), gc3=clamp(g.cols||8,1,16);
+      if(g.enabled!==false){
+        for(var gi=0;gi<gr*gc3;gi++){ var gseat=(snap.seatsGuest&&snap.seatsGuest["G"+gi])||{status:"empty",name:""}; rows.push([((g.label||"嘉賓區")+"·座位"+(gi+1)), gseat.name||"", stLabel[gseat.status]||gseat.status||""]); }
+      }
+    }
+    return rows;
+  }
+  function docxCrc32(bytes){
+    var t=docxCrc32._t||(docxCrc32._t=(function(){ var tb=[]; for(var n=0;n<256;n++){ var c=n; for(var k=0;k<8;k++){ c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); } tb[n]=c>>>0; } return tb; })());
+    var crc=0xFFFFFFFF;
+    for(var i=0;i<bytes.length;i++){ crc=(crc>>>8)^t[(crc^bytes[i])&0xFF]; }
+    return (crc^0xFFFFFFFF)>>>0;
+  }
+  function docxZip(files){
+    var chunks=[];
+    function u16(v){ chunks.push(v&0xff,(v>>>8)&0xff); }
+    function u32(v){ chunks.push(v&0xff,(v>>>8)&0xff,(v>>>16)&0xff,(v>>>24)&0xff); }
+    var central=[]; var offset=0;
+    files.forEach(function(f){
+      var nameBytes=new TextEncoder().encode(f.name);
+      var data=f.data; var crc=docxCrc32(data);
+      u32(0x04034b50); u16(20); u16(0); u16(0); u16(0); u16(0);
+      u32(crc); u32(data.length); u32(data.length);
+      u16(nameBytes.length); u16(0);
+      for(var i=0;i<nameBytes.length;i++) chunks.push(nameBytes[i]);
+      for(var j=0;j<data.length;j++) chunks.push(data[j]);
+      central.push({nameBytes:nameBytes, crc:crc, size:data.length, offset:offset});
+      offset+=30+nameBytes.length+data.length;
+    });
+    var cdStart=offset, cdSize=0;
+    central.forEach(function(c){
+      u32(0x02014b50); u16(20); u16(20); u16(0); u16(0); u16(0); u16(0);
+      u32(c.crc); u32(c.size); u32(c.size);
+      u16(c.nameBytes.length); u16(0); u16(0); u16(0); u16(0); u32(0);
+      u32(c.offset);
+      for(var i=0;i<c.nameBytes.length;i++) chunks.push(c.nameBytes[i]);
+      cdSize+=46+c.nameBytes.length;
+    });
+    u32(0x06054b50); u16(0); u16(0); u16(central.length); u16(central.length);
+    u32(cdSize); u32(cdStart); u16(0);
+    return new Uint8Array(chunks);
+  }
+  function docxEsc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function docxPara(text,o){
+    o=o||{}; var pPr=""; if(o.align) pPr+='<w:jc w:val="'+o.align+'"/>';
+    var rPr=""; if(o.bold) rPr+='<w:b/>'; if(o.color) rPr+='<w:color w:val="'+o.color+'"/>'; if(o.size) rPr+='<w:sz w:val="'+o.size+'"/>';
+    var run='<w:r>'+(rPr?'<w:rPr>'+rPr+'</w:rPr>':'')+'<w:t xml:space="preserve">'+docxEsc(text)+'</w:t></w:r>';
+    return '<w:p>'+(pPr?'<w:pPr>'+pPr+'</w:pPr>':'')+run+'</w:p>';
+  }
+  function docxTable2(rowsData){
+    var grid='<w:tblGrid><w:gridCol w:w="2200"/><w:gridCol w:w="7400"/></w:tblGrid>';
+    var borders='<w:tblBorders>'+["top","left","bottom","right","insideH","insideV"].map(function(b){return '<w:'+b+' w:val="single" w:sz="4" w:space="0" w:color="auto"/>';}).join('')+'</w:tblBorders>';
+    var tPr='<w:tblPr><w:tblW w:w="9600" w:type="dxa"/><w:tblBorders>'+borders+'</w:tblBorders></w:tblPr>';
+    var trs=rowsData.map(function(r){
+      var cells=r.map(function(c,idx){
+        var w=idx===0?2200:7400;
+        var lines=String(c).split("\n");
+        var ps=lines.map(function(ln){ return '<w:p><w:r>'+(idx===0?'<w:rPr><w:b/></w:rPr>':'')+'<w:t xml:space="preserve">'+docxEsc(ln)+'</w:t></w:r></w:p>'; }).join('');
+        return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/></w:tcPr>'+ps+'</w:tc>';
+      }).join('');
+      return '<w:tr>'+cells+'</w:tr>';
+    }).join('');
+    return '<w:tbl>'+tPr+grid+trs+'</w:tbl>';
+  }
+  function docxTableN(matrix){
+    var cols=matrix[0].length, colW=Math.floor(9600/cols);
+    var grid='<w:tblGrid>'+matrix[0].map(function(){ return '<w:gridCol w:w="'+colW+'"/>'; }).join('')+'</w:tblGrid>';
+    var borders='<w:tblBorders>'+["top","left","bottom","right","insideH","insideV"].map(function(b){return '<w:'+b+' w:val="single" w:sz="4" w:space="0" w:color="auto"/>';}).join('')+'</w:tblBorders>';
+    var tPr='<w:tblPr><w:tblW w:w="9600" w:type="dxa"/><w:tblBorders>'+borders+'</w:tblBorders></w:tblPr>';
+    var trs=matrix.map(function(row,ri){
+      var isHead=ri===0;
+      var cells=row.map(function(c){
+        var ps='<w:p><w:r>'+(isHead?'<w:rPr><w:b/><w:color w:val="FFFFFF"/></w:rPr>':'')+'<w:t xml:space="preserve">'+docxEsc(c)+'</w:t></w:r></w:p>';
+        return '<w:tc><w:tcPr><w:tcW w:w="'+colW+'" w:type="dxa"/>'+(isHead?'<w:shd w:val="clear" w:color="auto" w:fill="1D4ED8"/>':'')+'</w:tcPr>'+ps+'</w:tc>';
+      }).join('');
+      return '<w:tr>'+(isHead?'<w:trPr><w:tblHeader/></w:trPr>':'')+cells+'</w:tr>';
+    }).join('');
+    return '<w:tbl>'+tPr+grid+trs+'</w:tbl>';
+  }
+  function recRasterize(){
+    return new Promise(function(resolve,reject){
+      var svgEl=document.getElementById("stage"); if(!svgEl) return reject(new Error("no svg"));
+      var xml=new XMLSerializer().serializeToString(svgEl);
+      var src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml);
+      var img=new Image();
+      img.onload=function(){
+        var scale=2, vb=(svgEl.getAttribute("viewBox")||"0 0 1000 760").split(" ").map(Number);
+        var W=vb[2]||1000, H=vb[3]||760;
+        var cv=document.createElement("canvas"); cv.width=W*scale; cv.height=H*scale;
+        var ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+        ctx.drawImage(img,0,0,cv.width,cv.height);
+        cv.toBlob(function(b){ if(!b) return reject(new Error("blob null")); b.arrayBuffer().then(function(buf){ resolve(new Uint8Array(buf)); }); }, "image/png");
+      };
+      img.onerror=function(){ reject(new Error("img")); };
+      img.src=src;
+    });
+  }
+  function buildRecordDocx(rec, pngBytes){
+    var C=rec.snapshot.config;
+    var body="";
+    body+=docxPara(rec.name,{bold:true,size:36,color:"1F4E79",align:"center"});
+    if(rec.eventDate) body+=docxPara("活動日期："+rec.eventDate,{size:18,color:"6B7280",align:"center"});
+    if(rec.venue) body+=docxPara("場地："+rec.venue,{size:18,color:"6B7280",align:"center"});
+    body+=docxPara("",{});
+    body+=docxPara("一、場地與排位摘要",{bold:true,size:28,color:"1F4E79"});
+    var metaRows=[["場地名稱",rec.venue||""],["編排模式",modeLabel(rec.mode||"grid")],["建立時間",(rec.createdAt||"").replace("T"," ").slice(0,19)],["備註",rec.notes||""]];
+    if(C&&C.mode==="grid") metaRows.push(["座位規模",C.rows+"排×"+C.cols+"位＝"+(C.rows*C.cols)+"個"]);
+    if(C&&C.mode==="outdoor"){
+      var O=C.outdoor||{};
+      metaRows.push(["發佈台主位",(O.podium&&O.podium.enabled===false)?"不設（沒有此區域）":((O.podium&&O.podium.count)||5)]);
+      var facs=(O.facilities||[]).filter(function(f){ return f.enabled!==false; });
+      metaRows.push(["設施/裝置", facs.length? facs.map(function(f){ var fl=f.label||(f.kind==="screen"?"投影屏幕":"設施"); fl+="（X="+(f.x==null?120:f.x)+",Y="+(f.y==null?124:f.y)+"）"; return fl; }).join("、") : "（無）"]);
+      if(O.media) metaRows.push(["傳媒區座位",(O.media.enabled===false)?"不設（沒有此區域）":((O.media.rows||0)+"排×"+(O.media.cols||0)+"位＝"+((O.media.rows||0)*(O.media.cols||0))+"個")]);
+      if(O.guest) metaRows.push(["嘉賓區座位",(O.guest.enabled===false)?"不設（沒有此區域）":((O.guest.rows||0)+"排×"+(O.guest.cols||0)+"位＝"+((O.guest.rows||0)*(O.guest.cols||0))+"個")]);
+    }
+    if(C&&C.parking&&C.parking.enabled) metaRows.push(["停車區",(C.parking.label||"停車區")+(C.parking.sub?("（"+C.parking.sub+"）"):"")]);
+    if(C&&C.screens&&C.screens.length) metaRows.push(["投影屏幕",C.screens.map(function(s){ return (s.label||"屏幕")+(s.dir&&s.dir!=="top"?("（"+(s.dir==="left"?"左側直向":"右側直向")+"）"):""); }).join("、")]);
+    body+=docxTable2(metaRows);
+    body+=docxPara("",{});
+    body+=docxPara("二、座位圖",{bold:true,size:28,color:"1F4E79"});
+    if(pngBytes&&pngBytes.length){
+      body+=docxImagePara();
+    } else {
+      body+=docxPara("（座位圖轉圖失敗，請參閱另匯出之 SVG／PNG）",{size:16,color:"6B7280"});
+    }
+    body+=docxPara("",{});
+    body+=docxPara("三、座位名單",{bold:true,size:28,color:"1F4E79"});
+    var seatRows=recSeatRows(rec.snapshot);
+    if(seatRows.length) body+=docxTableN([["座位／桌位","姓名","狀態"]].concat(seatRows));
+    else body+=docxPara("（尚無座位資料）",{size:16,color:"6B7280"});
+    body+='<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>';
+    var doc='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>'+body+'</w:body></w:document>';
+    var ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+      +(pngBytes&&pngBytes.length?'<Default Extension="png" ContentType="image/png"/>':'')+'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+      +(pngBytes&&pngBytes.length?'<Override PartName="/word/media/image1.png" ContentType="image/png"/>':'')+'</Types>';
+    var rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+    var docRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      +(pngBytes&&pngBytes.length?'<Relationship Id="rIdImg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>':'')+'</Relationships>';
+    var files=[{name:"[Content_Types].xml",data:new TextEncoder().encode(ct)},{name:"_rels/.rels",data:new TextEncoder().encode(rootRels)},{name:"word/document.xml",data:new TextEncoder().encode(doc)},{name:"word/_rels/document.xml.rels",data:new TextEncoder().encode(docRels)}];
+    if(pngBytes&&pngBytes.length) files.push({name:"word/media/image1.png",data:pngBytes});
+    return new Blob([docxZip(files)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+  }
+  /* ================= 嘉賓名單（排位清單） =================
+     依目前座位圖排位順序產生：序號／區域／座位／姓名／部門機構／職稱／狀態。
+     匯出：DOCX（含預覽圖）、CSV、列印 PDF。 */
+  function glStatusLabel(C, key){
+    var arr=C.statuses||[];
+    for(var i=0;i<arr.length;i++){ if(arr[i].key===key) return arr[i].label; }
+    return key||"";
+  }
+  // 依排位順序列出全部座位（含空缺）；主講台主位排最前（grid 模式）
+  function guestRows(){
+    var C=state.config, rows=[], seq=0;
+    function push(zone, seat, s, statusKey){
+      s=s||{}; seq++;
+      var sk=statusKey||s.status||"empty";
+      rows.push({ seq:seq, zone:zone, seat:seat, name:s.name||"", org:s.org||"", title:s.title||"", status:sk, stLabel:glStatusLabel(C, sk) });
+    }
+    if(C.mode==="banquet"){
+      ((C.banquet&&C.banquet.tables)||[]).forEach(function(t){
+        for(var i=0;i<t.seats;i++){ push(t.label||"圓桌", (i===0?"主位":("第"+fmtNum(i+1)+"位")), state.seatsBanquet[t.id+"_"+i], null); }
+      });
+    } else if(C.mode==="meeting"){
+      var mt=(C.meeting&&C.meeting.table)||{};
+      meetingSeats(mt).forEach(function(s){ push(mt.label||"會議桌", (s.host?"主位":("第"+s.lbl+"位")), state.seatsMeeting[s.idx], null); });
+      staffSeatList(C, "meeting").forEach(function(s){
+        var pl=s.side==="left"?"左側":(s.side==="right"?"右側":"後方");
+        push((C.staff&&C.staff.label)||"工作人員座位區", pl+fmtNum(s.idx+1), state.seatsStaff[s.key], null);
+      });
+    } else if(C.mode==="grid"){
+      var arr2=(state.scenarios&&state.scenarios[state.activeScenario])||[];
+      for(var si=0; si<arr2.length; si++){
+        var who=String(arr2[si]||"").trim(); if(!who) continue;
+        var meta=((state.stageInfo||{})[state.activeScenario+"|"+si])||{};
+        push("主講台", "主位"+(si+1), { name:who, org:meta.org||"", title:meta.title||"" }, "confirmed");
+      }
+      var labels=rowLabels(C.rows);
+      for(var r=0;r<C.rows;r++){ for(var c=0;c<C.cols;c++){ var id=labels[r]+(c+1); push("與會者座位", id, state.seats[id], null); } }
+      staffSeatList(C, "grid").forEach(function(s){
+        var pl=s.side==="left"?"左側":(s.side==="right"?"右側":"後方");
+        push((C.staff&&C.staff.label)||"工作人員座位區", pl+fmtNum(s.idx+1), state.seatsStaff[s.key], null);
+      });
+    } else {
+      var O=C.outdoor||{};
+      var pod=O.podium||{label:"發佈台",count:5,enabled:true};
+      if(pod.enabled!==false){ var pn=clamp(pod.count||5,1,9); for(var pi=0;pi<pn;pi++){ push(pod.label||"發佈台", "發佈位"+(pi+1), state.seatsPodium["P"+pi], null); } }
+      var md=O.media||{rows:2,cols:8,enabled:true};
+      if(md.enabled!==false){ var mr=clamp(md.rows||2,1,8), mc=clamp(md.cols||8,1,16); for(var mi=0;mi<mr*mc;mi++){ push(md.label||"傳媒區", "座位"+(mi+1), state.seatsMedia["M"+mi], null); } }
+      var gs=O.guest||{rows:3,cols:8,enabled:true};
+      if(gs.enabled!==false){ var gr=clamp(gs.rows||3,1,8), gc=clamp(gs.cols||8,1,16); for(var gi=0;gi<gr*gc;gi++){ push(gs.label||"嘉賓區", "座位"+(gi+1), state.seatsGuest["G"+gi], null); } }
+    }
+    return rows;
+  }
+  function glVal(id, def){ var el=document.getElementById(id); return el? el.value : def; }
+  function glFilteredRows(){
+    var all=guestRows();
+    var f=glVal("glFilter","named");
+    var q=String(glVal("glFind","")).trim().toLowerCase();
+    var out=all.filter(function(r){
+      var hasName=!!String(r.name||"").trim();
+      if(f==="named" && !hasName) return false;
+      if(f==="empty" && hasName) return false;
+      if(q){
+        var hay=(r.name+" "+r.org+" "+r.title+" "+r.zone+" "+r.seat).toLowerCase();
+        if(hay.indexOf(q)<0) return false;
+      }
+      return true;
+    });
+    var sort=glVal("glSort","seat");
+    if(sort==="name"){
+      out=out.slice().sort(function(a,b){ return String(a.name||"").localeCompare(String(b.name||""),"zh-Hant"); });
+    }
+    return out;
+  }
+  // 座位／名單編號方式：arabic=阿拉伯數字 / chinese=中文數字（與獨立「排位嘉賓名單」工具一致，杜絕混用）
+  function numStyle(){ return state.numStyle || "arabic"; }
+  function toCN(n){
+    var d=["零","一","二","三","四","五","六","七","八","九","十"];
+    if(n<=10) return d[n];
+    if(n<20) return "十"+(n%10?d[n%10]:"");
+    if(n<100){ var t=Math.floor(n/10), o=n%10; return d[t]+"十"+(o?d[o]:""); }
+    return String(n);
+  }
+  function fmtNum(n){ return numStyle()==="chinese" ? toCN(n) : String(n); }
+  function updateGuestList(){
+    var wrap=document.getElementById("glTableWrap");
+    if(!wrap) return;
+    var all=guestRows(), rows=glFilteredRows();
+    var C=state.config;
+    var named=all.filter(function(r){ return !!String(r.name||"").trim(); });
+    var emptyN=all.length-named.length;
+    var stCount={}; (C.statuses||[]).forEach(function(s){ stCount[s.key]=0; });
+    named.forEach(function(r){ if(stCount[r.status]!=null) stCount[r.status]++; });
+    var statsBox=document.getElementById("glStats");
+    if(statsBox){
+      var chips='<div class="gl-stat"><b>'+named.length+'</b><span>出席人數（已排位）</span></div>'
+        +'<div class="gl-stat"><b>'+all.length+'</b><span>座位總數</span></div>'
+        +'<div class="gl-stat"><b>'+emptyN+'</b><span>空缺座位</span></div>';
+      (C.statuses||[]).forEach(function(s){
+        chips+='<div class="gl-stat"><b>'+(stCount[s.key]||0)+'</b><span>'+esc(s.label)+'</span></div>';
+      });
+      statsBox.innerHTML=chips;
+    }
+    var sort=glVal("glSort","seat");
+    var html='<table class="gl"><thead><tr><th>序號</th><th>區域 · 座位／桌位</th><th>姓名</th><th>部門／機構</th><th>職稱</th><th>狀態</th></tr></thead><tbody>';
+    var lastZone=null, n=0, zoneCount={};
+    rows.forEach(function(r){ zoneCount[r.zone]=(zoneCount[r.zone]||0)+1; });
+    rows.forEach(function(r){
+      if(sort==="zone" && r.zone!==lastZone){
+        lastZone=r.zone;
+        html+='<tr class="gl-grp"><td colspan="6">'+esc(r.zone)+'（'+zoneCount[r.zone]+' 位）</td></tr>';
+      }
+      n++;
+      var hasName=!!String(r.name||"").trim();
+      html+='<tr>'
+        +'<td>'+fmtNum(n)+'</td>'
+        +'<td class="gl-seat">'+esc(r.zone)+' · '+esc(r.seat)+'</td>'
+        +'<td class="'+(hasName?"gl-name":"gl-empty")+'">'+(hasName?esc(r.name):"（空缺）")+'</td>'
+        +'<td>'+(r.org?esc(r.org):'<span class="gl-empty">—</span>')+'</td>'
+        +'<td>'+(r.title?esc(r.title):'<span class="gl-empty">—</span>')+'</td>'
+        +'<td>'+esc(r.stLabel||"")+'</td>'
+        +'</tr>';
+    });
+    if(!rows.length) html+='<tr><td colspan="6" class="gl-empty" style="padding:16px;text-align:center;">（沒有符合條件的記錄）</td></tr>';
+    html+='</tbody></table>';
+    wrap.innerHTML=html;
+    var pv=document.getElementById("glPreview");
+    if(pv){
+      var cb=document.getElementById("glPreviewOn");
+      var on=cb? !!cb.checked : true;
+      if(on){
+        var svgEl=document.getElementById("stage");
+        if(svgEl){
+          var cl=svgEl.cloneNode(true);
+          cl.setAttribute("id","glPreviewSvg");
+          pv.innerHTML=""; pv.appendChild(cl); pv.style.display="";
+        }
+      } else { pv.innerHTML=""; pv.style.display="none"; }
+    }
+  }
+  function guestNamedRows(){
+    return guestRows().filter(function(r){ return !!String(r.name||"").trim(); });
+  }
+  window.exportGuestCSV=function(){
+    var rows=guestNamedRows();
+    var out=[["序號","區域","座位／桌位","姓名","部門／機構","職稱","狀態"]];
+    rows.forEach(function(r,i){ out.push([fmtNum(i+1), r.zone, r.seat, r.name, r.org||"", r.title||"", r.stLabel||""]); });
+    var csv=out.map(function(row){
+      return row.map(function(cell){ var s=String(cell==null?"":cell); if(/[",\n\r]/.test(s)) s='"'+s.replace(/"/g,'""')+'"'; return s; }).join(",");
+    }).join("\r\n");
+    downloadBlob(new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}), "嘉賓名單_"+baseName()+".csv");
+    var msg=document.getElementById("glMsg"); if(msg) msg.textContent="已匯出嘉賓名單 CSV（"+rows.length+" 位）。";
+  };
+  window.printGuest=function(){
+    var d=document.getElementById("guestPanel"); if(d) d.open=true;
+    updateGuestList();
+    setTimeout(function(){ window.print(); }, 80);
+  };
+  // 把目前座位圖以 PNG 嵌入 DOCX 的段落 XML（記錄匯出與嘉賓名單共用）
+  function docxImagePara(){
+    var svgEl=document.getElementById("stage");
+    var vb=((svgEl&&svgEl.getAttribute("viewBox"))||"0 0 1000 760").split(" ").map(Number);
+    var W=vb[2]||1000, H=vb[3]||760, wEmu=6000000, hEmu=Math.round(wEmu*H/W);
+    return '<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="'+wEmu+'" cy="'+hEmu+'"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="seat"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="seat.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdImg"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+wEmu+'" cy="'+hEmu+'"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+  }
+  function makeDocxBlob(body, pngBytes){
+    var doc='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      +'<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>'+body+'</w:body></w:document>';
+    var ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+      +(pngBytes&&pngBytes.length?'<Default Extension="png" ContentType="image/png"/>':'')+'<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+      +(pngBytes&&pngBytes.length?'<Override PartName="/word/media/image1.png" ContentType="image/png"/>':'')+'</Types>';
+    var rootRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>';
+    var docRels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      +(pngBytes&&pngBytes.length?'<Relationship Id="rIdImg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>':'')+'</Relationships>';
+    var files=[{name:"[Content_Types].xml",data:new TextEncoder().encode(ct)},{name:"_rels/.rels",data:new TextEncoder().encode(rootRels)},{name:"word/document.xml",data:new TextEncoder().encode(doc)},{name:"word/_rels/document.xml.rels",data:new TextEncoder().encode(docRels)}];
+    if(pngBytes&&pngBytes.length) files.push({name:"word/media/image1.png",data:pngBytes});
+    return new Blob([docxZip(files)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
+  }
+  function buildGuestDocx(pngBytes){
+    var C=state.config;
+    var all=guestRows(), rows=guestNamedRows();
+    var body="";
+    body+=docxPara((C.activity||"活動")+"　嘉賓名單",{bold:true,size:36,color:"1F4E79",align:"center"});
+    var sub=[]; if(C.venue) sub.push(C.venue); sub.push(modeLabel(C.mode||"grid"));
+    body+=docxPara(sub.join(" · "),{size:18,color:"6B7280",align:"center"});
+    body+=docxPara("",{});
+    body+=docxPara("一、人數統計",{bold:true,size:28,color:"1F4E79"});
+    var stCount={}; (C.statuses||[]).forEach(function(s){ stCount[s.key]=0; });
+    rows.forEach(function(r){ if(stCount[r.status]!=null) stCount[r.status]++; });
+    var meta=[["座位總數",String(all.length)],["出席人數（已排位）",String(rows.length)],["空缺座位",String(all.length-rows.length)]];
+    (C.statuses||[]).forEach(function(s){ meta.push([s.label, String(stCount[s.key]||0)]); });
+    body+=docxTable2(meta);
+    body+=docxPara("",{});
+    body+=docxPara("二、排位預覽圖",{bold:true,size:28,color:"1F4E79"});
+    if(pngBytes&&pngBytes.length){ body+=docxImagePara(); }
+    else { body+=docxPara("（座位圖轉圖失敗，請參閱另匯出之 SVG／PNG）",{size:16,color:"6B7280"}); }
+    body+=docxPara("",{});
+    body+=docxPara("三、嘉賓名單",{bold:true,size:28,color:"1F4E79"});
+    if(rows.length){
+      var matrix=[["序號","區域 · 座位","姓名","部門／機構","職稱","狀態"]];
+      rows.forEach(function(r,i){ matrix.push([fmtNum(i+1), r.zone+" · "+r.seat, r.name, r.org||"", r.title||"", r.stLabel||""]); });
+      body+=docxTableN(matrix);
+    } else {
+      body+=docxPara("（尚無已填寫姓名之出席者）",{size:16,color:"6B7280"});
+    }
+    body+='<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>';
+    return makeDocxBlob(body, pngBytes);
+  }
+  window.exportGuestDocx=function(){
+    var msg=document.getElementById("glMsg"); if(msg) msg.textContent="正在產生 DOCX…";
+    recRasterize().then(function(png){
+      downloadBlob(buildGuestDocx(png), "嘉賓名單_"+baseName()+".docx");
+      if(msg) msg.textContent="已匯出嘉賓名單 DOCX（含預覽圖）。";
+    }).catch(function(){
+      downloadBlob(buildGuestDocx(null), "嘉賓名單_"+baseName()+".docx");
+      if(msg) msg.textContent="已匯出嘉賓名單 DOCX（座位圖轉圖失敗，改以文字說明）。";
+    });
+  };
+  function recToDocx(id){
+    var arr=recLoad(), rec=null;
+    for(var i=0;i<arr.length;i++){ if(arr[i].id===id){ rec=arr[i]; break; } }
+    if(!rec) return;
+    var msg=document.getElementById("recMsg"); if(msg) msg.textContent="正在生成 DOCX…";
+    var bak=recClone(state);
+    state=normalizeSnap(rec.snapshot); render();
+    recRasterize().then(function(png){
+      var blob=buildRecordDocx(rec, png);
+      downloadBlob(blob, "座位記錄_"+sanitizeName(rec.name)+".docx");
+      state=bak; render(); syncConfigPanel();
+      if(msg) msg.textContent="已匯出記錄「"+rec.name+"」DOCX（含座位圖）。";
+    }).catch(function(){
+      var blob=buildRecordDocx(rec, null);
+      state=bak; render(); syncConfigPanel();
+      if(msg) msg.textContent="已匯出記錄 DOCX（座位圖轉圖失敗，改以文字說明）。";
+    });
+  }
+  window.saveRecord=saveRecord; window.applyRecord=applyRecord; window.previewRecord=previewRecord;
+  window.exitPreview=exitPreview; window.delRecord=delRecord; window.recToJSON=recToJSON;
+  window.recToDocx=recToDocx; window.exportAllRec=exportAllRec; window.importAllRec=importAllRec;
+
+  bindConfig();
+  render();
+  syncConfigPanel();
+  updatePreview();
+  renderRecList();
+  // 行動版：預設收合次要設定面板，減少初始捲動長度（場地設定與嘉賓名單保持展開）
+  if(window.matchMedia && window.matchMedia("(max-width:768px)").matches){
+    ["exitPanel","screenPanel","autoPanel","recordsPanel"].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.open=false;
+    });
+  }
+  (function(){ var rd=document.getElementById("recDate"); if(rd && !rd.value){ var d=new Date(); var p=function(n){return (n<10?"0":"")+n;}; rd.value=d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); } })();
+  // 嘉賓名單控制項
+  ["glFilter","glSort","glFind"].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el){ var h=function(){ updateGuestList(); }; el.onchange=h; el.oninput=h; }
+  });
+  (function(){ var cb=document.getElementById("glPreviewOn"); if(cb) cb.onchange=function(){ updateGuestList(); }; })();
+  (function(){ var sel=document.getElementById("glNumStyle"); if(sel){ sel.value=state.numStyle||"arabic"; sel.onchange=function(){ state.numStyle=this.value; save(); render(); updateGuestList(); }; } })();
+  function bindStaffConfig(){
+    function g(id){ return document.getElementById(id); }
+    if(!g("cfgStaffOn")) return;
+    g("cfgStaffOn").onchange=function(){ if(!state.config.staff) state.config.staff={}; state.config.staff.enabled=this.checked; save(); render(); };
+    g("cfgStaffLabel").oninput=function(){ if(!state.config.staff) state.config.staff={}; state.config.staff.label=this.value; save(); render(); };
+    g("cfgStaffPos").onchange=function(){ if(!state.config.staff) state.config.staff={}; state.config.staff.pos=this.value; syncStaffPanel(); save(); render(); };
+    g("cfgStaffSide").oninput=function(){ if(!state.config.staff) state.config.staff={}; state.config.staff.sideCount=clamp(parseInt(this.value,10)||6,1,20); save(); render(); };
+    g("cfgStaffBackR").oninput=function(){ if(!state.config.staff) state.config.staff={}; state.config.staff.backRows=clamp(parseInt(this.value,10)||1,1,4); save(); render(); };
+    g("cfgStaffBackC").oninput=function(){ if(!state.config.staff) state.config.staff={}; state.config.staff.backCols=clamp(parseInt(this.value,10)||8,1,16); save(); render(); };
+  }
+  function syncStaffPanel(){
+    var pos=(document.getElementById("cfgStaffPos")||{}).value||"both";
+    var labSide=document.getElementById("labStaffSide");
+    var labBR=document.getElementById("labStaffBR");
+    var labBC=document.getElementById("labStaffBC");
+    if(labSide) labSide.style.display=(pos==="back")?"none":"";
+    if(labBR) labBR.style.display=(pos==="back")?"":"none";
+    if(labBC) labBC.style.display=(pos==="back")?"":"none";
+  }
+  bindStaffConfig();
+  updateGuestList();
+  // 版本標記：若頂部未顯示「標籤讓位」，表示瀏覽器仍在讀舊快取，需強制重新整理
+  var bt=document.getElementById("buildTag");
+  if(bt){ bt.textContent="2026-09-05.1（行動版優化）"; }
+  var bn=document.getElementById("buildNote");
+  if(bn){ bn.textContent="　·　新增：圖面雙指捏合／按鈕縮放與平移、觸控拖曳圓桌與設施、iOS 輸入不跳縮放、可「加入主畫面」離線使用；並修復觸控拖曳被瀏覽器誤判為捲動而失效的問題。若此行未出現，請按 Ctrl/Cmd+Shift+R 強制重新整理。"; }
+})();
+</script>
+</body>
+</html>
